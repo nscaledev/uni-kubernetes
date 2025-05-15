@@ -160,7 +160,7 @@ func (c *Client) get(ctx context.Context, namespace, clusterManagerID string) (*
 func (c *Client) defaultApplicationBundle(ctx context.Context) (*unikornv1.ClusterManagerApplicationBundle, error) {
 	applicationBundles, err := applicationbundle.NewClient(c.client).ListClusterManager(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.ClusterManagerApplicationBundle) bool {

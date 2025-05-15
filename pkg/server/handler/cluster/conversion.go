@@ -209,7 +209,7 @@ func convertList(in *unikornv1.KubernetesClusterList) openapi.KubernetesClusters
 func (g *generator) defaultApplicationBundle(ctx context.Context) (*unikornv1.KubernetesClusterApplicationBundle, error) {
 	applicationBundles, err := applicationbundle.NewClient(g.client).ListCluster(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.KubernetesClusterApplicationBundle) bool {

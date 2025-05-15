@@ -123,7 +123,7 @@ func convertList(in *unikornv1.VirtualKubernetesClusterList) openapi.VirtualKube
 func (g *generator) defaultApplicationBundle(ctx context.Context) (*unikornv1.VirtualKubernetesClusterApplicationBundle, error) {
 	applicationBundles, err := applicationbundle.NewClient(g.client).ListVirtualCluster(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.VirtualKubernetesClusterApplicationBundle) bool {
