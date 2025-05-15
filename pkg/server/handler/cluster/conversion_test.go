@@ -27,6 +27,7 @@ import (
 
 	unikorncorev1 "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -56,7 +57,8 @@ func applicationBundleFixture(t *testing.T, version string) *unikornv1.Kubernete
 
 	return &unikornv1.KubernetesClusterApplicationBundle{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: bundleName(version),
+			Name:      bundleName(version),
+			Namespace: defaultNamespace,
 		},
 		Spec: unikornv1.ApplicationBundleSpec{
 			Version: unikorncorev1.SemanticVersion{
@@ -83,6 +85,8 @@ func newClient(t *testing.T) client.Client {
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(bundles...).Build()
 }
 
+const defaultNamespace = "default"
+
 // TestApplicationBundleNameGenerationCreateDefault ensure the latest bundle is selected if none
 // is passed via the API.  This is lagacy behaviour.
 func TestApplicationBundleNameGenerationCreateDefault(t *testing.T) {
@@ -99,7 +103,8 @@ func TestApplicationBundleNameGenerationCreateDefault(t *testing.T) {
 		Spec: openapi.KubernetesClusterSpec{},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
 	require.Equal(t, bundleName(versionNewest), name)
@@ -123,7 +128,8 @@ func TestApplicationBundleNameGenerationCreateExplicit(t *testing.T) {
 		},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
 	require.Equal(t, bundleName(versionMiddle), name)
@@ -151,7 +157,8 @@ func TestApplicationBundleNameGenerationUpdateDefault(t *testing.T) {
 		Spec: openapi.KubernetesClusterSpec{},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
 	require.Equal(t, bundleName(versionMiddle), name)
@@ -181,7 +188,8 @@ func TestApplicationBundleNameGenerationUpdateExplicit(t *testing.T) {
 		},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
 	require.Equal(t, bundleName(versionOldest), name)

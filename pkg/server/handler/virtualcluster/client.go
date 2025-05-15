@@ -339,14 +339,18 @@ func preserveAnnotations(requested, current *unikornv1.VirtualKubernetesCluster)
 	return nil
 }
 
+type appBundleLister interface {
+	ListVirtualCluster(ctx context.Context) (*unikornv1.VirtualKubernetesClusterApplicationBundleList, error)
+}
+
 // Create creates the implicit cluster identified by the JTW claims.
-func (c *Client) Create(ctx context.Context, organizationID, projectID string, request *openapi.VirtualKubernetesClusterWrite) (*openapi.VirtualKubernetesClusterRead, error) {
+func (c *Client) Create(ctx context.Context, appclient appBundleLister, organizationID, projectID string, request *openapi.VirtualKubernetesClusterWrite) (*openapi.VirtualKubernetesClusterRead, error) {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return nil, err
 	}
 
-	cluster, err := newGenerator(c.client, namespace.Name, organizationID, projectID).generate(ctx, request)
+	cluster, err := newGenerator(c.client, namespace.Name, organizationID, projectID).generate(ctx, appclient, request)
 	if err != nil {
 		return nil, err
 	}
@@ -397,7 +401,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 }
 
 // Update implements read/modify/write for the cluster.
-func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterID string, request *openapi.VirtualKubernetesClusterWrite) error {
+func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterID string, request *openapi.VirtualKubernetesClusterWrite) error {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return err
@@ -412,7 +416,7 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 		return err
 	}
 
-	required, err := newGenerator(c.client, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, request)
+	required, err := newGenerator(c.client, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, appclient, request)
 	if err != nil {
 		return err
 	}

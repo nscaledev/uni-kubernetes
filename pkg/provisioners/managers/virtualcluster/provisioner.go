@@ -74,7 +74,8 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	appclient := applicationbundle.NewClient(cli)
+	appclient := applicationbundle.NewClient(cli, namespace)
+
 	bundle, err := appclient.GetVirtualKubernetesCluster(ctx, a.cluster.Spec.ApplicationBundle)
 	if err != nil {
 		return nil, nil, err

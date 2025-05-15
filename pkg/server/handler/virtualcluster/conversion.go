@@ -25,7 +25,6 @@ import (
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
-	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -120,8 +119,8 @@ func convertList(in *unikornv1.VirtualKubernetesClusterList) openapi.VirtualKube
 }
 
 // defaultApplicationBundle returns a default application bundle.
-func (g *generator) defaultApplicationBundle(ctx context.Context) (*unikornv1.VirtualKubernetesClusterApplicationBundle, error) {
-	applicationBundles, err := applicationbundle.NewClient(g.client).ListVirtualCluster(ctx)
+func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.VirtualKubernetesClusterApplicationBundle, error) {
+	applicationBundles, err := appclient.ListVirtualCluster(ctx)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
 	}
@@ -180,8 +179,8 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.VirtualKubernetes
 // generate generates the full cluster custom resource.
 // TODO: there are a lot of parameters being passed about, we should make this
 // a struct and pass them as a single blob.
-func (g *generator) generate(ctx context.Context, request *openapi.VirtualKubernetesClusterWrite) (*unikornv1.VirtualKubernetesCluster, error) {
-	applicationBundle, err := g.defaultApplicationBundle(ctx)
+func (g *generator) generate(ctx context.Context, appclient appBundleLister, request *openapi.VirtualKubernetesClusterWrite) (*unikornv1.VirtualKubernetesCluster, error) {
+	applicationBundle, err := g.defaultApplicationBundle(ctx, appclient)
 	if err != nil {
 		return nil, err
 	}

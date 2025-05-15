@@ -90,7 +90,9 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 	if err != nil {
 		return nil, nil, err
 	}
-	appclient := applicationbundle.NewClient(cli)
+
+	appclient := applicationbundle.NewClient(cli, namespace)
+
 	bundle, err := appclient.GetKubernetesCluster(ctx, a.cluster.Spec.ApplicationBundle)
 	if err != nil {
 		return nil, nil, err

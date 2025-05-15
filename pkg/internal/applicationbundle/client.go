@@ -33,9 +33,9 @@ type Client struct {
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client) *Client {
+func NewClient(c client.Client, namespace string) *Client {
 	return &Client{
-		client: client,
+		client: client.NewNamespacedClient(c, namespace),
 	}
 }
 
