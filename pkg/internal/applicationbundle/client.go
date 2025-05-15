@@ -60,6 +60,16 @@ func (c *Client) GetKubernetesCluster(ctx context.Context, name string) (*unikor
 	return result, nil
 }
 
+func (c *Client) GetVirtualKubernetesCluster(ctx context.Context, name string) (*unikornv1.VirtualKubernetesClusterApplicationBundle, error) {
+	result := &unikornv1.VirtualKubernetesClusterApplicationBundle{}
+
+	if err := c.client.Get(ctx, client.ObjectKey{Name: name}, result); err != nil {
+		return nil, errors.HTTPNotFound().WithError(err)
+	}
+
+	return result, nil
+}
+
 func (c *Client) ListClusterManager(ctx context.Context) (*unikornv1.ClusterManagerApplicationBundleList, error) {
 	result := &unikornv1.ClusterManagerApplicationBundleList{}
 

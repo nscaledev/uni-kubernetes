@@ -32,6 +32,7 @@ import (
 	"github.com/unikorn-cloud/core/pkg/provisioners/remotecluster"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
 	regionutil "github.com/unikorn-cloud/kubernetes/pkg/util/region"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
@@ -73,14 +74,9 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	key := client.ObjectKey{
-		Namespace: namespace,
-		Name:      a.cluster.Spec.ApplicationBundle,
-	}
-
-	bundle := &unikornv1.VirtualKubernetesClusterApplicationBundle{}
-
-	if err := cli.Get(ctx, key, bundle); err != nil {
+	appclient := applicationbundle.NewClient(cli)
+	bundle, err := appclient.GetVirtualKubernetesCluster(ctx, a.cluster.Spec.ApplicationBundle)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -89,14 +85,14 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	key = client.ObjectKey{
+	appkey := client.ObjectKey{
 		Namespace: namespace,
 		Name:      *reference.Name,
 	}
 
 	application := &unikornv1core.HelmApplication{}
 
-	if err := cli.Get(ctx, key, application); err != nil {
+	if err := cli.Get(ctx, appkey, application); err != nil {
 		return nil, nil, err
 	}
 
