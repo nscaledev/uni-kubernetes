@@ -101,7 +101,7 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 }
 
 func (a *ApplicationReferenceGetter) vCluster(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
-	return a.getApplication(ctx, "vcluster")
+	return a.getApplication(ctx, "virtualcluster")
 }
 
 // Options allows access to CLI options in the provisioner.
