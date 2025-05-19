@@ -26,6 +26,9 @@ spec:
         {{- with $domain := .Values.virtualClusterController.virtualKubernetesClusterDomain }}
         - --virtual-kubernetes-cluster-domain={{ $domain }}
         {{- end }}
+        {{- with $label := .Values.virtualClusterController.nodeSelectorLabel }}{{ if $label }}
+        - --node-selector-label={{ $label }}
+        {{- end }}{{- end }}
         ports:
         - name: prometheus
           containerPort: 8080

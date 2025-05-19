@@ -48,14 +48,19 @@ func init() {
 	metrics.Registry.MustRegister(durationMetric)
 }
 
+type ProvisionerOptions struct {
+	Domain            string
+	NodeSelectorLabel string
+}
+
 type Provisioner struct {
-	domain string
+	Options ProvisionerOptions
 }
 
 // New returns a new initialized provisioner object.
-func New(getApplication application.GetterFunc, domain string) *application.Provisioner {
+func New(getApplication application.GetterFunc, options ProvisionerOptions) *application.Provisioner {
 	p := &Provisioner{
-		domain: domain,
+		Options: options,
 	}
 
 	return application.New(getApplication).WithGenerator(p)
@@ -84,7 +89,8 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 	// and the cost is "what you use", we'll need to worry about billing, so it may
 	// be prudent to add organization, project and cluster labels to pods.
 	// We use SNI to demutiplex at the ingress to the correct vcluster instance.
-	hostname := p.ReleaseName(ctx) + "." + p.domain
+	releaseName := p.ReleaseName(ctx)
+	hostname := releaseName + "." + p.Options.Domain
 
 	// Allow users to actually hit the cluster.
 	ingress := map[string]any{
@@ -132,12 +138,21 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		"statefulSet":  statefulSet,
 	}
 
+	syncNodes := map[string]any{
+		"enabled":          true,
+		"clearImageStatus": true,
+	}
+	if nodeSelectorLabel := p.Options.NodeSelectorLabel; nodeSelectorLabel != "" {
+		syncNodes["selector"] = map[string]any{
+			"labels": map[string]string{
+				nodeSelectorLabel: releaseName,
+			},
+		}
+	}
+
 	sync := map[string]any{
 		"fromHost": map[string]any{
-			"nodes": map[string]any{
-				"enabled":          true,
-				"clearImageStatus": true,
-			},
+			"nodes": syncNodes,
 			"runtimeClasses": map[string]any{
 				"enabled": true,
 			},

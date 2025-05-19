@@ -30,6 +30,8 @@ virtualClusterController:
   image: ~
   # Sets the DDNS domain virtual clusters will be part of
   virtualKubernetesClusterDomain: ~
+  # Tells the controller to use a nodeSelector when creating vClusters
+  nodeSelectorLabel: ""
 
 # Monitor specific configuration.
 monitor:
