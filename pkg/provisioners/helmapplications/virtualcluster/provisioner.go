@@ -51,6 +51,9 @@ func init() {
 type ProvisionerOptions struct {
 	Domain            string
 	NodeSelectorLabel string
+	// if true, then instead of making a label `foo: <clusterName>` for the selector,
+	// make `foo/<clusterName>: ""` (assuming the NodeSelectorLabel is `foo/`)
+	NodeSelectorLabelIsPrefix bool
 }
 
 type Provisioner struct {
@@ -142,12 +145,16 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		"enabled":          true,
 		"clearImageStatus": true,
 	}
+
 	if nodeSelectorLabel := p.Options.NodeSelectorLabel; nodeSelectorLabel != "" {
-		syncNodes["selector"] = map[string]any{
-			"labels": map[string]string{
-				nodeSelectorLabel: releaseName,
-			},
+		selector := map[string]any{}
+		if p.Options.NodeSelectorLabelIsPrefix {
+			selector[nodeSelectorLabel+releaseName] = ""
+		} else {
+			selector[nodeSelectorLabel] = releaseName
 		}
+
+		syncNodes["selector"] = selector
 	}
 
 	sync := map[string]any{

@@ -32,6 +32,7 @@ virtualClusterController:
   virtualKubernetesClusterDomain: ~
   # Tells the controller to use a nodeSelector when creating vClusters
   nodeSelectorLabel: ""
+  nodeSelectorLabelIsPrefix: false
 
 # Monitor specific configuration.
 monitor:

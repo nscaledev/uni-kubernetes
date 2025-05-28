@@ -28,7 +28,10 @@ spec:
         {{- end }}
         {{- with $label := .Values.virtualClusterController.nodeSelectorLabel }}{{ if $label }}
         - --node-selector-label={{ $label }}
-        {{- end }}{{- end }}
+        {{ end }}{{- end -}}
+        {{- if .Values.virtualClusterController.nodeSelectorLabelIsPrefix -}}
+        - --node-selector-label-is-prefix
+        {{ end -}}
         ports:
         - name: prometheus
           containerPort: 8080
