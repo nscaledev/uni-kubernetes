@@ -60,7 +60,7 @@ type ProvisionerOptions struct {
 func (opts *ProvisionerOptions) AddFlags(f *pflag.FlagSet) {
 	f.StringVar(&opts.Domain, "virtual-kubernetes-cluster-domain", "virtual-kubernetes.example.com", "DNS domain for vclusters to be hosts of.")
 	f.StringVar(&opts.NodeSelectorLabel, "node-selector-label", "", "Label to use for vCluster node selectors (will be given the value of the vcluster name, in the selector).")
-	f.BoolVar(&opts.NodeSelectorLabelIsPrefix, "node-selector-label-is-prefix", false, "If set, the node selector label will be the vcluster name appended to --node-selector-label, and the value an empty string")
+	f.BoolVar(&opts.NodeSelectorLabelIsPrefix, "node-selector-label-is-prefix", false, `If set, the node selector label will be the vcluster name appended to --node-selector-label after a '/', and the value an empty string`)
 }
 
 // NodeSelector creates a `MatchLabels`-style map for supplying to the vcluster chart, based
@@ -71,7 +71,7 @@ func (opts *ProvisionerOptions) NodeSelector(vclusterName string) map[string]str
 	if nodeSelectorLabel := opts.NodeSelectorLabel; nodeSelectorLabel != "" {
 		selector = map[string]string{}
 		if opts.NodeSelectorLabelIsPrefix {
-			selector[nodeSelectorLabel+vclusterName] = ""
+			selector[nodeSelectorLabel+"/"+vclusterName] = ""
 		} else {
 			selector[nodeSelectorLabel] = vclusterName
 		}
