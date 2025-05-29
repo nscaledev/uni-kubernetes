@@ -475,8 +475,17 @@ func preserveAnnotations(requested, current *unikornv1.KubernetesCluster) error 
 	return nil
 }
 
+type appBundleLister interface {
+	ListCluster(ctx context.Context) (*unikornv1.KubernetesClusterApplicationBundleList, error)
+}
+
+type appBundleListerPlus interface {
+	appBundleLister
+	ListClusterManager(ctx context.Context) (*unikornv1.ClusterManagerApplicationBundleList, error)
+}
+
 // Create creates the implicit cluster identified by the JTW claims.
-func (c *Client) Create(ctx context.Context, organizationID, projectID string, request *openapi.KubernetesClusterWrite) (*openapi.KubernetesClusterRead, error) {
+func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, organizationID, projectID string, request *openapi.KubernetesClusterWrite) (*openapi.KubernetesClusterRead, error) {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -484,7 +493,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 
 	// Implicitly create the controller manager.
 	if request.Spec.ClusterManagerId == nil {
-		clusterManager, err := clustermanager.NewClient(c.client).CreateImplicit(ctx, organizationID, projectID)
+		clusterManager, err := clustermanager.NewClient(c.client).CreateImplicit(ctx, appclient, organizationID, projectID)
 		if err != nil {
 			return nil, err
 		}
@@ -492,7 +501,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		request.Spec.ClusterManagerId = ptr.To(clusterManager.Name)
 	}
 
-	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, request)
+	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, appclient, request)
 	if err != nil {
 		return nil, err
 	}
@@ -550,7 +559,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 }
 
 // Update implements read/modify/write for the cluster.
-func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterID string, request *openapi.KubernetesClusterWrite) error {
+func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterID string, request *openapi.KubernetesClusterWrite) error {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return err
@@ -565,7 +574,7 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 		return err
 	}
 
-	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, request)
+	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, appclient, request)
 	if err != nil {
 		return err
 	}

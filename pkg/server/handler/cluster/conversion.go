@@ -32,7 +32,6 @@ import (
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -206,10 +205,10 @@ func convertList(in *unikornv1.KubernetesClusterList) openapi.KubernetesClusters
 }
 
 // defaultApplicationBundle returns a default application bundle.
-func (g *generator) defaultApplicationBundle(ctx context.Context) (*unikornv1.KubernetesClusterApplicationBundle, error) {
-	applicationBundles, err := applicationbundle.NewClient(g.client).ListCluster(ctx)
+func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.KubernetesClusterApplicationBundle, error) {
+	applicationBundles, err := appclient.ListCluster(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.KubernetesClusterApplicationBundle) bool {
@@ -503,14 +502,14 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 
 // generateApplicationBundleName either selects a default or an explicit version on
 // cluster creation, and preserves or uses an explicit version on update.
-func (g *generator) generateApplicationBundleName(ctx context.Context, in *openapi.KubernetesClusterWrite) (string, error) {
+func (g *generator) generateApplicationBundleName(ctx context.Context, appclient appBundleLister, in *openapi.KubernetesClusterWrite) (string, error) {
 	// Cluster creation...
 	if g.existing == nil {
 		if in.Spec.ApplicationBundleName != nil {
 			return *in.Spec.ApplicationBundleName, nil
 		}
 
-		bundle, err := g.defaultApplicationBundle(ctx)
+		bundle, err := g.defaultApplicationBundle(ctx, appclient)
 		if err != nil {
 			return "", err
 		}
@@ -577,7 +576,7 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster
 // generate generates the full cluster custom resource.
 // TODO: there are a lot of parameters being passed about, we should make this
 // a struct and pass them as a single blob.
-func (g *generator) generate(ctx context.Context, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
+func (g *generator) generate(ctx context.Context, appclient appBundleLister, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
 	kubernetesControlPlane, err := g.generateControlPlane(ctx, request)
 	if err != nil {
 		return nil, err
@@ -588,7 +587,7 @@ func (g *generator) generate(ctx context.Context, request *openapi.KubernetesClu
 		return nil, err
 	}
 
-	applicationBundleName, err := g.generateApplicationBundleName(ctx, request)
+	applicationBundleName, err := g.generateApplicationBundleName(ctx, appclient, request)
 	if err != nil {
 		return nil, err
 	}
