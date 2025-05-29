@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/pflag"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/core/pkg/provisioners/application"
@@ -48,14 +49,45 @@ func init() {
 	metrics.Registry.MustRegister(durationMetric)
 }
 
+type ProvisionerOptions struct {
+	Domain            string
+	NodeSelectorLabel string
+	// if true, then instead of making a label `foo: <clusterName>` for the selector,
+	// make `foo/<clusterName>: ""` (assuming the NodeSelectorLabel is `foo/`)
+	NodeSelectorLabelIsPrefix bool
+}
+
+func (opts *ProvisionerOptions) AddFlags(f *pflag.FlagSet) {
+	f.StringVar(&opts.Domain, "virtual-kubernetes-cluster-domain", "virtual-kubernetes.example.com", "DNS domain for vclusters to be hosts of.")
+	f.StringVar(&opts.NodeSelectorLabel, "node-selector-label", "", "Label to use for vCluster node selectors (will be given the value of the vcluster name, in the selector).")
+	f.BoolVar(&opts.NodeSelectorLabelIsPrefix, "node-selector-label-is-prefix", false, `If set, the node selector label will be the vcluster name appended to --node-selector-label after a '/', and the value an empty string`)
+}
+
+// NodeSelector creates a `MatchLabels`-style map for supplying to the vcluster chart, based
+// on the options given. This is used to restrict the nodes that will be available to the vcluster.
+// `vclusterName` is any value that identifies the vcluster in question.
+func (opts *ProvisionerOptions) NodeSelector(vclusterName string) map[string]string {
+	var selector map[string]string
+	if nodeSelectorLabel := opts.NodeSelectorLabel; nodeSelectorLabel != "" {
+		selector = map[string]string{}
+		if opts.NodeSelectorLabelIsPrefix {
+			selector[nodeSelectorLabel+"/"+vclusterName] = ""
+		} else {
+			selector[nodeSelectorLabel] = vclusterName
+		}
+	}
+
+	return selector
+}
+
 type Provisioner struct {
-	domain string
+	Options ProvisionerOptions
 }
 
 // New returns a new initialized provisioner object.
-func New(getApplication application.GetterFunc, domain string) *application.Provisioner {
+func New(getApplication application.GetterFunc, options ProvisionerOptions) *application.Provisioner {
 	p := &Provisioner{
-		domain: domain,
+		Options: options,
 	}
 
 	return application.New(getApplication).WithGenerator(p)
@@ -84,7 +116,8 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 	// and the cost is "what you use", we'll need to worry about billing, so it may
 	// be prudent to add organization, project and cluster labels to pods.
 	// We use SNI to demutiplex at the ingress to the correct vcluster instance.
-	hostname := p.ReleaseName(ctx) + "." + p.domain
+	releaseName := p.ReleaseName(ctx)
+	hostname := releaseName + "." + p.Options.Domain
 
 	// Allow users to actually hit the cluster.
 	ingress := map[string]any{
@@ -132,12 +165,20 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		"statefulSet":  statefulSet,
 	}
 
+	syncNodes := map[string]any{
+		"enabled":          true,
+		"clearImageStatus": true,
+	}
+
+	// Supply a node selector to the vcluster if the options say to use one. The release name is
+	// used as the vcluster name.
+	if selector := p.Options.NodeSelector(releaseName); selector != nil {
+		syncNodes["selector"] = selector
+	}
+
 	sync := map[string]any{
 		"fromHost": map[string]any{
-			"nodes": map[string]any{
-				"enabled":          true,
-				"clearImageStatus": true,
-			},
+			"nodes": syncNodes,
 			"runtimeClasses": map[string]any{
 				"enabled": true,
 			},

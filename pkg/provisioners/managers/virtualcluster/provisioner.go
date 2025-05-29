@@ -117,9 +117,8 @@ type Options struct {
 	// we need to talk to identity to get a token, and then to region
 	// to ensure cloud identities and networks are provisioned, as well
 	// as deprovisioning them.
-	clientOptions coreclient.HTTPClientOptions
-	// domain vclusters should appear in.
-	domain string
+	clientOptions      coreclient.HTTPClientOptions
+	provisionerOptions virtualcluster.ProvisionerOptions
 }
 
 func (o *Options) AddFlags(f *pflag.FlagSet) {
@@ -134,8 +133,7 @@ func (o *Options) AddFlags(f *pflag.FlagSet) {
 	o.identityOptions.AddFlags(f)
 	o.regionOptions.AddFlags(f)
 	o.clientOptions.AddFlags(f)
-
-	f.StringVar(&o.domain, "virtual-kubernetes-cluster-domain", "virtual-kubernetes.example.com", "DNS domain for vclusters to be hosts of.")
+	o.provisionerOptions.AddFlags(f)
 }
 
 // Provisioner encapsulates control plane provisioning.
@@ -245,7 +243,7 @@ func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner
 	// from the workload pool.  This information and the scheduling
 	// stuff needs passing into the provisioner.
 	provisioner := remoteCluster.ProvisionOn(
-		virtualcluster.New(apps.vCluster, p.options.domain).InNamespace(p.cluster.Name),
+		virtualcluster.New(apps.vCluster, p.options.provisionerOptions).InNamespace(p.cluster.Name),
 		// NOTE: If you are using a unikorn-provisioned physical cluster as a region
 		// then you'll end up with two remotes for the same thing, and the
 		// secrets will alias (aka split brain), so override the secret name

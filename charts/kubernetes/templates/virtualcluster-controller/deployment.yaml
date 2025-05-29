@@ -23,8 +23,14 @@ spec:
         {{- include "unikorn.region.flags" . | nindent 8 }}
         {{- include "unikorn.otlp.flags" . | nindent 8 }}
         {{- include "unikorn.mtls.flags" . | nindent 8 }}
-        {{- with $domain := .Values.virtualClusterController.virtualKubernetesClusterDomain }}
+        {{ with $domain := .Values.virtualClusterController.virtualKubernetesClusterDomain -}}
         - --virtual-kubernetes-cluster-domain={{ $domain }}
+        {{- end }}
+        {{ with $label := .Values.virtualClusterController.nodeSelectorLabel }}
+        - --node-selector-label={{ $label }}
+        {{- end }}
+        {{ if .Values.virtualClusterController.nodeSelectorLabelIsPrefix -}}
+        - --node-selector-label-is-prefix
         {{- end }}
         ports:
         - name: prometheus
