@@ -133,10 +133,7 @@ func (o *Options) AddFlags(f *pflag.FlagSet) {
 	o.identityOptions.AddFlags(f)
 	o.regionOptions.AddFlags(f)
 	o.clientOptions.AddFlags(f)
-
-	f.StringVar(&o.provisionerOptions.Domain, "virtual-kubernetes-cluster-domain", "virtual-kubernetes.example.com", "DNS domain for vclusters to be hosts of.")
-	f.StringVar(&o.provisionerOptions.NodeSelectorLabel, "node-selector-label", "", "Label to use for vCluster node selectors (will be given the value of the vcluster name, in the selector).")
-	f.BoolVar(&o.provisionerOptions.NodeSelectorLabelIsPrefix, "node-selector-label-is-prefix", false, "If set, the node selector label will be the vcluster name appended to --node-selector-label, and the value an empty string")
+	o.provisionerOptions.AddFlags(f)
 }
 
 // Provisioner encapsulates control plane provisioning.

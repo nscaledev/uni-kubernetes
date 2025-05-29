@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/spf13/pflag"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/core/pkg/provisioners/application"
@@ -54,6 +55,12 @@ type ProvisionerOptions struct {
 	// if true, then instead of making a label `foo: <clusterName>` for the selector,
 	// make `foo/<clusterName>: ""` (assuming the NodeSelectorLabel is `foo/`)
 	NodeSelectorLabelIsPrefix bool
+}
+
+func (opts *ProvisionerOptions) AddFlags(f *pflag.FlagSet) {
+	f.StringVar(&opts.Domain, "virtual-kubernetes-cluster-domain", "virtual-kubernetes.example.com", "DNS domain for vclusters to be hosts of.")
+	f.StringVar(&opts.NodeSelectorLabel, "node-selector-label", "", "Label to use for vCluster node selectors (will be given the value of the vcluster name, in the selector).")
+	f.BoolVar(&opts.NodeSelectorLabelIsPrefix, "node-selector-label-is-prefix", false, "If set, the node selector label will be the vcluster name appended to --node-selector-label, and the value an empty string")
 }
 
 type Provisioner struct {
