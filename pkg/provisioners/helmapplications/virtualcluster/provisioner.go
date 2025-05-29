@@ -63,6 +63,23 @@ func (opts *ProvisionerOptions) AddFlags(f *pflag.FlagSet) {
 	f.BoolVar(&opts.NodeSelectorLabelIsPrefix, "node-selector-label-is-prefix", false, "If set, the node selector label will be the vcluster name appended to --node-selector-label, and the value an empty string")
 }
 
+// NodeSelector creates a `MatchLabels`-style map for supplying to the vcluster chart, based
+// on the options given. This is used to restrict the nodes that will be available to the vcluster.
+// `vclusterName` is any value that identifies the vcluster in question.
+func (opts *ProvisionerOptions) NodeSelector(vclusterName string) map[string]string {
+	var selector map[string]string
+	if nodeSelectorLabel := opts.NodeSelectorLabel; nodeSelectorLabel != "" {
+		selector = map[string]string{}
+		if opts.NodeSelectorLabelIsPrefix {
+			selector[nodeSelectorLabel+vclusterName] = ""
+		} else {
+			selector[nodeSelectorLabel] = vclusterName
+		}
+	}
+
+	return selector
+}
+
 type Provisioner struct {
 	Options ProvisionerOptions
 }
@@ -153,14 +170,9 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		"clearImageStatus": true,
 	}
 
-	if nodeSelectorLabel := p.Options.NodeSelectorLabel; nodeSelectorLabel != "" {
-		selector := map[string]any{}
-		if p.Options.NodeSelectorLabelIsPrefix {
-			selector[nodeSelectorLabel+releaseName] = ""
-		} else {
-			selector[nodeSelectorLabel] = releaseName
-		}
-
+	// Supply a node selector to the vcluster if the options say to use one. The release name is
+	// used as the vcluster name.
+	if selector := p.Options.NodeSelector(releaseName); selector != nil {
 		syncNodes["selector"] = selector
 	}
 
