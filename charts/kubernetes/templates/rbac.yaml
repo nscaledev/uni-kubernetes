@@ -1,0 +1,67 @@
+{{- $systemAccountName := "unikorn-kubernetes" -}}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-client
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+spec:
+  issuerRef:
+    group: cert-manager.io
+    kind: ClusterIssuer
+    name: unikorn-client-issuer
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 4096
+  secretName: {{ include "unikorn.mtls.certificate-name" . }}
+  commonName: {{ $systemAccountName }}
+---
+apiVersion: identity.unikorn-cloud.org/v1alpha1
+kind: Role
+metadata:
+  name: {{ include "resource.id" $systemAccountName }}
+  labels:
+    {{- include "unikorn.labels" $ | nindent 4 }}
+    unikorn-cloud.org/name: {{ $systemAccountName }}
+  annotations:
+    unikorn-cloud.org/description: Unikorn Kubernetes service.
+spec:
+  protected: true
+  scopes:
+    global:
+    # For quota management.
+    - name: "identity:allocations"
+      operations: [create,read,update,delete]
+    # To create a cloud identity to provision hardware.
+    - name: "region:identities"
+      operations: [create,read,delete]
+    # To present compatible regions.
+    - name: "region:regions"
+      operations: [read]
+    # To get access to the kubeconfig for virtual clusters.
+    - name: "region:regions/detail"
+      operations: [read]
+    # To present compatible flavors.
+    - name: "region:flavors"
+      operations: [read]
+    # To present compatible images.
+    - name: "region:images"
+      operations: [read]
+    # To advertise networks to use for public IP allocation.
+    - name: "region:externalnetworks"
+      operations: [read]
+    # To create VLAN provider networks for baremetal clusters.
+    - name: "region:networks"
+      operations: [create,read,delete]
+---
+apiVersion: identity.unikorn-cloud.org/v1alpha1
+kind: SystemAccount
+metadata:
+  name: {{ $systemAccountName }}
+  labels:
+    {{- include "unikorn.labels" $ | nindent 4 }}
+spec:
+  role:
+    name: {{ include "resource.id" $systemAccountName }}
