@@ -148,7 +148,9 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		sync = map[string]any{
 			"fromHost": map[string]any{
 				"nodes": map[string]any{
-					"selector": selector,
+					"selector": map[string]any{
+						"labels": selector,
+					},
 				},
 			},
 		}
