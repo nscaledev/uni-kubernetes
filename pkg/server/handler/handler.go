@@ -257,7 +257,7 @@ func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClusterman
 }
 
 func (h *Handler) clusterClient() *cluster.Client {
-	return cluster.NewClient(h.client, h.namespace, &h.options.Cluster, h.identity, h.region)
+	return cluster.NewClient(h.client, &h.options.Cluster, h.identity, h.region)
 }
 
 func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter) {
@@ -362,7 +362,7 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersCl
 }
 
 func (h *Handler) virtualClusterClient() *virtualcluster.Client {
-	return virtualcluster.NewClient(h.client, h.namespace, h.identity, h.region)
+	return virtualcluster.NewClient(h.client, h.identity, h.region)
 }
 
 func (h *Handler) GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter) {
