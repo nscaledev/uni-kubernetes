@@ -58,9 +58,6 @@ type Client struct {
 	// client allows Kubernetes API access.
 	client client.Client
 
-	// namespace the controller runs in.
-	namespace string
-
 	// identity is a client to access the identity service.
 	identity *identity.Client
 
@@ -69,12 +66,11 @@ type Client struct {
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, namespace string, identity *identity.Client, region *region.Client) *Client {
+func NewClient(client client.Client, identity *identity.Client, region *region.Client) *Client {
 	return &Client{
-		client:    client,
-		namespace: namespace,
-		identity:  identity,
-		region:    region,
+		client:   client,
+		identity: identity,
+		region:   region,
 	}
 }
 

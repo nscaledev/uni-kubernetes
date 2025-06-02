@@ -86,9 +86,6 @@ type Client struct {
 	// client allows Kubernetes API access.
 	client client.Client
 
-	// namespace the controller runs in.
-	namespace string
-
 	// options control various defaults and the like.
 	options *Options
 
@@ -100,13 +97,12 @@ type Client struct {
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, namespace string, options *Options, identity *identity.Client, region *region.Client) *Client {
+func NewClient(client client.Client, options *Options, identity *identity.Client, region *region.Client) *Client {
 	return &Client{
-		client:    client,
-		namespace: namespace,
-		options:   options,
-		identity:  identity,
-		region:    region,
+		client:   client,
+		options:  options,
+		identity: identity,
+		region:   region,
 	}
 }
 
