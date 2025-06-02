@@ -41,6 +41,7 @@ import (
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
+	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	kubernetesprovisioners "github.com/unikorn-cloud/kubernetes/pkg/provisioners"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/amdgpuoperator"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/certmanager"
@@ -90,14 +91,10 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	key := client.ObjectKey{
-		Namespace: namespace,
-		Name:      a.cluster.Spec.ApplicationBundle,
-	}
+	appclient := applicationbundle.NewClient(cli, namespace)
 
-	bundle := &unikornv1.KubernetesClusterApplicationBundle{}
-
-	if err := cli.Get(ctx, key, bundle); err != nil {
+	bundle, err := appclient.GetKubernetesCluster(ctx, a.cluster.Spec.ApplicationBundle)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -106,14 +103,14 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	key = client.ObjectKey{
+	appkey := client.ObjectKey{
 		Namespace: namespace,
 		Name:      *reference.Name,
 	}
 
 	application := &unikornv1core.HelmApplication{}
 
-	if err := cli.Get(ctx, key, application); err != nil {
+	if err := cli.Get(ctx, appkey, application); err != nil {
 		return nil, nil, err
 	}
 

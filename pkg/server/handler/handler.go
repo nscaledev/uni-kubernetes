@@ -28,6 +28,7 @@ import (
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	"github.com/unikorn-cloud/identity/pkg/rbac"
+	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/cluster"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/clustermanager"
@@ -112,6 +113,10 @@ func (h *Handler) setCacheable(w http.ResponseWriter) {
 	w.Header().Add("Cache-Control", "private")
 }
 */
+
+func (h *Handler) applicationBundleClient() *applicationbundle.Client {
+	return applicationbundle.NewClient(h.client, h.namespace)
+}
 
 func (h *Handler) setUncacheable(w http.ResponseWriter) {
 	w.Header().Add("Cache-Control", "no-cache")
@@ -200,7 +205,7 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusterma
 		return
 	}
 
-	result, err := clustermanager.NewClient(h.client).Create(ctx, organizationID, projectID, request)
+	result, err := clustermanager.NewClient(h.client).Create(ctx, h.applicationBundleClient(), organizationID, projectID, request)
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return
@@ -242,7 +247,7 @@ func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClusterman
 		return
 	}
 
-	if err := clustermanager.NewClient(h.client).Update(ctx, organizationID, projectID, clusterManagerID, request); err != nil {
+	if err := clustermanager.NewClient(h.client).Update(ctx, h.applicationBundleClient(), organizationID, projectID, clusterManagerID, request); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -287,7 +292,7 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(
 		return
 	}
 
-	result, err := h.clusterClient().Create(ctx, organizationID, projectID, request)
+	result, err := h.clusterClient().Create(ctx, h.applicationBundleClient(), organizationID, projectID, request)
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return
@@ -329,7 +334,7 @@ func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersCl
 		return
 	}
 
-	if err := h.clusterClient().Update(ctx, organizationID, projectID, clusterID, request); err != nil {
+	if err := h.clusterClient().Update(ctx, h.applicationBundleClient(), organizationID, projectID, clusterID, request); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -392,7 +397,7 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualcl
 		return
 	}
 
-	result, err := h.virtualClusterClient().Create(ctx, organizationID, projectID, request)
+	result, err := h.virtualClusterClient().Create(ctx, h.applicationBundleClient(), organizationID, projectID, request)
 	if err != nil {
 		errors.HandleError(w, r, err)
 		return
@@ -434,7 +439,7 @@ func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclu
 		return
 	}
 
-	if err := h.virtualClusterClient().Update(ctx, organizationID, projectID, clusterID, request); err != nil {
+	if err := h.virtualClusterClient().Update(ctx, h.applicationBundleClient(), organizationID, projectID, clusterID, request); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}

@@ -27,6 +27,7 @@ import (
 
 	unikorncorev1 "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,12 +44,15 @@ const (
 	versionNewest = "v1.1.2"
 )
 
-func bundleName(version string) string {
+const defaultNamespace = "default"
+const otherNamespace = "other"
+
+func expectedBundleName(version string) string {
 	return "bundle-" + version
 }
 
 // applicationBundleFixture generates an application bundle object in a terse fashion.
-func applicationBundleFixture(t *testing.T, version string) *unikornv1.KubernetesClusterApplicationBundle {
+func applicationBundleFixture(t *testing.T, version string, namespace, name string) *unikornv1.KubernetesClusterApplicationBundle {
 	t.Helper()
 
 	v, err := semver.NewVersion(version)
@@ -56,7 +60,8 @@ func applicationBundleFixture(t *testing.T, version string) *unikornv1.Kubernete
 
 	return &unikornv1.KubernetesClusterApplicationBundle{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: bundleName(version),
+			Name:      name,
+			Namespace: namespace,
 		},
 		Spec: unikornv1.ApplicationBundleSpec{
 			Version: unikorncorev1.SemanticVersion{
@@ -75,9 +80,13 @@ func newClient(t *testing.T) client.Client {
 	require.NoError(t, unikornv1.AddToScheme(scheme))
 
 	bundles := []client.Object{
-		applicationBundleFixture(t, versionMiddle),
-		applicationBundleFixture(t, versionNewest),
-		applicationBundleFixture(t, versionOldest),
+		applicationBundleFixture(t, versionMiddle, defaultNamespace, expectedBundleName(versionMiddle)),
+		applicationBundleFixture(t, versionNewest, defaultNamespace, expectedBundleName(versionNewest)),
+		applicationBundleFixture(t, versionOldest, defaultNamespace, expectedBundleName(versionOldest)),
+		// and some false choices
+		applicationBundleFixture(t, versionMiddle, otherNamespace, "other-"+expectedBundleName(versionMiddle)),
+		applicationBundleFixture(t, versionNewest, otherNamespace, "other-"+expectedBundleName(versionNewest)),
+		applicationBundleFixture(t, versionOldest, otherNamespace, "other-"+expectedBundleName(versionOldest)),
 	}
 
 	return fake.NewClientBuilder().WithScheme(scheme).WithObjects(bundles...).Build()
@@ -99,10 +108,11 @@ func TestApplicationBundleNameGenerationCreateDefault(t *testing.T) {
 		Spec: openapi.KubernetesClusterSpec{},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
-	require.Equal(t, bundleName(versionNewest), name)
+	require.Equal(t, expectedBundleName(versionNewest), name)
 }
 
 // TestApplicationBundleNameGenerationCreateExplicit checks that a bundle is selected explicitly
@@ -119,14 +129,15 @@ func TestApplicationBundleNameGenerationCreateExplicit(t *testing.T) {
 
 	request := &openapi.KubernetesClusterWrite{
 		Spec: openapi.KubernetesClusterSpec{
-			ApplicationBundleName: ptr.To(bundleName(versionMiddle)),
+			ApplicationBundleName: ptr.To(expectedBundleName(versionMiddle)),
 		},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
-	require.Equal(t, bundleName(versionMiddle), name)
+	require.Equal(t, expectedBundleName(versionMiddle), name)
 }
 
 // TestApplicationBundleNameGenerationUpdateDefault checks that on update a bundle version
@@ -141,7 +152,7 @@ func TestApplicationBundleNameGenerationUpdateDefault(t *testing.T) {
 
 	existing := &unikornv1.KubernetesCluster{
 		Spec: unikornv1.KubernetesClusterSpec{
-			ApplicationBundle: bundleName(versionMiddle),
+			ApplicationBundle: expectedBundleName(versionMiddle),
 		},
 	}
 
@@ -151,10 +162,11 @@ func TestApplicationBundleNameGenerationUpdateDefault(t *testing.T) {
 		Spec: openapi.KubernetesClusterSpec{},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
-	require.Equal(t, bundleName(versionMiddle), name)
+	require.Equal(t, expectedBundleName(versionMiddle), name)
 }
 
 // TestApplicationBundleNameGenerationUpdateExplicit checks that a bundle selected at the API
@@ -169,7 +181,7 @@ func TestApplicationBundleNameGenerationUpdateExplicit(t *testing.T) {
 
 	existing := &unikornv1.KubernetesCluster{
 		Spec: unikornv1.KubernetesClusterSpec{
-			ApplicationBundle: bundleName(versionNewest),
+			ApplicationBundle: expectedBundleName(versionNewest),
 		},
 	}
 
@@ -177,12 +189,13 @@ func TestApplicationBundleNameGenerationUpdateExplicit(t *testing.T) {
 
 	request := &openapi.KubernetesClusterWrite{
 		Spec: openapi.KubernetesClusterSpec{
-			ApplicationBundleName: ptr.To(bundleName(versionOldest)),
+			ApplicationBundleName: ptr.To(expectedBundleName(versionOldest)),
 		},
 	}
 
-	name, err := g.generateApplicationBundleName(ctx, request)
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+	name, err := g.generateApplicationBundleName(ctx, appclient, request)
 	require.NoError(t, err)
 	require.NotNil(t, name)
-	require.Equal(t, bundleName(versionOldest), name)
+	require.Equal(t, expectedBundleName(versionOldest), name)
 }
