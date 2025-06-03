@@ -278,6 +278,21 @@ entries:
     version: v0.1.1
   unikorn-kubernetes:
   - apiVersion: v2
+    appVersion: v1.2.1
+    created: "2025-06-03T09:23:22.055812239Z"
+    dependencies:
+    - name: unikorn-common
+      repository: https://nscaledev.github.io/uni-helm-common
+      version: v0.1.15
+    description: A Helm chart for deploying Unikorn Kubernetes Service
+    digest: 691932e1b656970526bd4b29940fd67626a8c838bf73f2ead6b3cea6da88b064
+    icon: https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/dark-on-light/icon.png
+    name: unikorn-kubernetes
+    type: application
+    urls:
+    - https://github.com/nscaledev/uni-kubernetes/releases/download/v1.2.1/unikorn-kubernetes-v1.2.1.tgz
+    version: v1.2.1
+  - apiVersion: v2
     appVersion: v1.2.0
     created: "2025-06-02T16:15:23.980817709Z"
     dependencies:
@@ -1656,4 +1671,4 @@ entries:
     urls:
     - https://github.com/unikorn-cloud/kubernetes/releases/download/v0.2.11/unikorn-kubernetes-v0.2.11.tgz
     version: v0.2.11
-generated: "2025-06-02T16:15:23.98116426Z"
+generated: "2025-06-03T09:23:22.056126354Z"
