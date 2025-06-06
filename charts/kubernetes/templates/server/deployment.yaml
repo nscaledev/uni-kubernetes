@@ -32,12 +32,7 @@ spec:
         - name: pprof
           containerPort: 6060
         resources:
-          requests:
-            cpu: "50m"
-            memory: 50Mi
-          limits:
-            cpu: "100m"
-            memory: 100Mi
+          {{- .Values.server.resources | toYaml | nindent 10 }}
         securityContext:
           readOnlyRootFilesystem: true
       serviceAccountName: {{ .Release.Name }}-server
