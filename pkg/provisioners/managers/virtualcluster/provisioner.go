@@ -240,7 +240,8 @@ func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner
 	// from the workload pool.  This information and the scheduling
 	// stuff needs passing into the provisioner.
 	provisioner := remoteCluster.ProvisionOn(
-		virtualcluster.New(apps.vCluster, p.options.provisionerOptions).InNamespace(p.cluster.Name),
+		// The namespace gets a prefix so it's easier to distinguish for automation and eyeballs.
+		virtualcluster.New(apps.vCluster, p.options.provisionerOptions).InNamespace("virtualcluster-"+p.cluster.Name),
 		// NOTE: If you are using a unikorn-provisioned physical cluster as a region
 		// then you'll end up with two remotes for the same thing, and the
 		// secrets will alias (aka split brain), so override the secret name
