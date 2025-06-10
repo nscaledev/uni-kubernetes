@@ -187,17 +187,20 @@ func (p *Provisioner) getKubeconfig(ctx context.Context, client regionapi.Client
 	return regionutil.Kubeconfig(region)
 }
 
-type remoteKubernetes struct {
+type regionRemote struct {
 	cluster    *unikornv1.VirtualKubernetesCluster
 	kubeconfig []byte
 }
 
-func (r *remoteKubernetes) ID() *cd.ResourceIdentifier {
+func (r *regionRemote) ID() *cd.ResourceIdentifier {
 	resourceLabels, _ := r.cluster.ResourceLabels()
 
 	var labels []cd.ResourceIdentifierLabel
 
-	for _, label := range coreconstants.LabelPriorities() {
+	// Note that this does not use the full set of labels; it's the region cluster we
+	// will be installing to, not the virtual cluster, and we want it to calculate the
+	// same Secret for the same region.
+	for _, label := range []string{coreconstants.OrganizationLabel} {
 		if value, ok := resourceLabels[label]; ok {
 			labels = append(labels, cd.ResourceIdentifierLabel{
 				Name:  label,
@@ -212,7 +215,7 @@ func (r *remoteKubernetes) ID() *cd.ResourceIdentifier {
 	}
 }
 
-func (r *remoteKubernetes) Config(ctx context.Context) (*clientcmdapi.Config, error) {
+func (r *regionRemote) Config(ctx context.Context) (*clientcmdapi.Config, error) {
 	config, err := clientcmd.NewClientConfigFromBytes(r.kubeconfig)
 	if err != nil {
 		return nil, err
@@ -229,12 +232,14 @@ func (r *remoteKubernetes) Config(ctx context.Context) (*clientcmdapi.Config, er
 func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner {
 	apps := newApplicationReferenceGetter(&p.cluster)
 
-	remoteGenerator := &remoteKubernetes{
+	regionGenerator := &regionRemote{
 		cluster:    &p.cluster,
 		kubeconfig: kubeconfig,
 	}
+	labels, _ := p.cluster.ResourceLabels()
+	orgID := labels[coreconstants.OrganizationLabel]
 
-	remoteCluster := remotecluster.New(remoteGenerator, true)
+	remoteCluster := remotecluster.New(regionGenerator, true)
 
 	// TODO: we need some machines to run the cluster on, separate
 	// from the workload pool.  This information and the scheduling
@@ -242,12 +247,8 @@ func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner
 	provisioner := remoteCluster.ProvisionOn(
 		// The namespace gets a prefix so it's easier to distinguish for automation and eyeballs.
 		virtualcluster.New(apps.vCluster, p.options.provisionerOptions).InNamespace("virtualcluster-"+p.cluster.Name),
-		// NOTE: If you are using a unikorn-provisioned physical cluster as a region
-		// then you'll end up with two remotes for the same thing, and the
-		// secrets will alias (aka split brain), so override the secret name
-		// prefix to override the default.
-		// TODO: feels a bit smelly!
-		remotecluster.WithPrefix("vcluster"),
+		// The remote gets a prefix so it doesn't collide with other org's virtual cluster remotes.
+		remotecluster.WithPrefix("region-org-"+orgID),
 	)
 
 	return provisioner
