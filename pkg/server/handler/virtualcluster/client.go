@@ -31,6 +31,7 @@ import (
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
+	provisioner "github.com/unikorn-cloud/kubernetes/pkg/provisioners/managers/virtualcluster"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/common"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/identity"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
@@ -167,7 +168,7 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 	}
 
 	objectKey := client.ObjectKey{
-		Namespace: cluster.Name,
+		Namespace: provisioner.RemoteNamespace(cluster),
 		Name:      "vc-" + virtualcluster.ReleaseName(cluster),
 	}
 
