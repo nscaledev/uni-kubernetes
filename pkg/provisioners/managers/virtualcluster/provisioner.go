@@ -229,6 +229,10 @@ func (r *regionRemote) Config(ctx context.Context) (*clientcmdapi.Config, error)
 	return &rawConfig, nil
 }
 
+func RemoteNamespace(cluster *unikornv1.VirtualKubernetesCluster) string {
+	return "virtualcluster-" + cluster.Name
+}
+
 func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner {
 	apps := newApplicationReferenceGetter(&p.cluster)
 
@@ -246,7 +250,7 @@ func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner
 	// stuff needs passing into the provisioner.
 	provisioner := remoteCluster.ProvisionOn(
 		// The namespace gets a prefix so it's easier to distinguish for automation and eyeballs.
-		virtualcluster.New(apps.vCluster, p.options.provisionerOptions).InNamespace("virtualcluster-"+p.cluster.Name),
+		virtualcluster.New(apps.vCluster, p.options.provisionerOptions).InNamespace(RemoteNamespace(&p.cluster)),
 		// The remote gets a prefix so it doesn't collide with other org's virtual cluster remotes.
 		remotecluster.WithPrefix("region-org-"+orgID),
 	)
