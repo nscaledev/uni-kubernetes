@@ -108,7 +108,7 @@ func waitCondition(ctx context.Context, client dynamic.Interface, group, version
 		}
 
 		for i := range conditions {
-			condition, ok := conditions[i].(map[string]interface{})
+			condition, ok := conditions[i].(map[string]any)
 			if !ok {
 				return fmt.Errorf("%w: condition type assertion error", ErrConditionFormat)
 			}
@@ -200,7 +200,7 @@ func getDockerNetwork(name string) *net.IPNet {
 		panic(err)
 	}
 
-	var dockerNetConfigs []map[string]interface{}
+	var dockerNetConfigs []map[string]any
 
 	if err := json.Unmarshal(out, &dockerNetConfigs); err != nil {
 		panic(err)
@@ -216,7 +216,7 @@ func getDockerNetwork(name string) *net.IPNet {
 	}
 
 	for i := range ipamConfigs {
-		ipamConfig, ok := ipamConfigs[i].(map[string]interface{})
+		ipamConfig, ok := ipamConfigs[i].(map[string]any)
 		if !ok {
 			panic("config format fail")
 		}

@@ -82,7 +82,7 @@ func (p *Provisioner) generateStorageClasses() []*storagev1.StorageClass {
 }
 
 // Generate implements the application.ValuesGenerator interface.
-func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (interface{}, error) {
+func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (any, error) {
 	client, err := coreclient.ProvisionerClientFromContext(ctx)
 	if err != nil {
 		return nil, err
@@ -119,20 +119,20 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		return nil, err
 	}
 
-	values := map[string]interface{}{
-		"commonAnnotations": map[string]interface{}{
+	values := map[string]any{
+		"commonAnnotations": map[string]any{
 			constants.ConfigurationHashAnnotation: cloudConfigHash,
 		},
 		// Allow scale to zero.
-		"csi": map[string]interface{}{
-			"plugin": map[string]interface{}{
-				"controllerPlugin": map[string]interface{}{
+		"csi": map[string]any{
+			"plugin": map[string]any{
+				"controllerPlugin": map[string]any{
 					"nodeSelector": util.ControlPlaneNodeSelector(),
 					"tolerations":  util.ControlPlaneTolerations(),
 				},
 			},
 		},
-		"storageClass": map[string]interface{}{
+		"storageClass": map[string]any{
 			"enabled": false,
 			"custom":  strings.Join(yamls, "---\n"),
 		},

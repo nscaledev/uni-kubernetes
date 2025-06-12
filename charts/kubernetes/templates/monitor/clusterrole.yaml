@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: unikorn-monitor
+  name: {{ .Release.Name }}-monitor
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 rules:
@@ -11,16 +11,34 @@ rules:
   resources:
   - clustermanagers
   - kubernetesclusters
+  - virtualkubernetesclusters
   verbs:
   - list
   - watch
   - update
+# Update status conditions
+- apiGroups:
+  - unikorn-cloud.org
+  resources:
+  - clustermanagers/status
+  - kubernetesclusters/status
+  - virtualkubernetesclusters/status
+  verbs:
+  - patch
 # Get application bundles
 - apiGroups:
   - unikorn-cloud.org
   resources:
   - clustermanagerapplicationbundles
   - kubernetesclusterapplicationbundles
+  verbs:
+  - list
+  - watch
+# ArgoCD application access for health monitoring.
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
   verbs:
   - list
   - watch

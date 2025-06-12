@@ -46,7 +46,7 @@ func (c *Checker) upgradeResource(ctx context.Context, resource *unikornv1.Kuber
 	logger := log.FromContext(ctx)
 
 	// If the current bundle is in preview, then don't offer to upgrade.
-	if current.Spec.Preview != nil && *current.Spec.Preview {
+	if current.Spec.Preview {
 		logger.Info("bundle in preview, ignoring")
 
 		return nil
@@ -85,7 +85,7 @@ func (c *Checker) upgradeResource(ctx context.Context, resource *unikornv1.Kuber
 
 	logger.Info("bundle upgrading")
 
-	resource.Spec.ApplicationBundle = &target.Name
+	resource.Spec.ApplicationBundle = target.Name
 
 	if err := c.client.Update(ctx, resource); err != nil {
 		return err
@@ -116,13 +116,13 @@ func (c *Checker) Check(ctx context.Context) error {
 
 		// What we need to do is respect semantic versioning, e.g. a major is a breaking
 		// change therefore auto-upgrade is not allowed.
-		currentBundle := allBundles.Get(*resource.Spec.ApplicationBundle)
+		currentBundle := allBundles.Get(resource.Spec.ApplicationBundle)
 		if currentBundle == nil {
-			return fmt.Errorf("%w: %s", errors.ErrMissingBundle, *resource.Spec.ApplicationBundle)
+			return fmt.Errorf("%w: %s", errors.ErrMissingBundle, resource.Spec.ApplicationBundle)
 		}
 
 		discard := func(bundle unikornv1.KubernetesClusterApplicationBundle) bool {
-			return bundle.Spec.Version.Version.Major() != currentBundle.Spec.Version.Major()
+			return bundle.Spec.Version.Major() != currentBundle.Spec.Version.Major()
 		}
 
 		allowedBundles := &unikornv1.KubernetesClusterApplicationBundleList{

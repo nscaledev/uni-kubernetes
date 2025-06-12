@@ -1,4 +1,4 @@
-# Unikorn Kubernetes Service
+# Kubernetes Service
 
 ![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/light-on-dark/logo.svg#gh-dark-mode-only)
 ![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/dark-on-light/logo.svg#gh-light-mode-only)
@@ -7,29 +7,29 @@
 
 ### Resources
 
-Unikorn Kubernetes service abstracts away installation of Cluster API.
+Kubernetes service abstracts away installation of Cluster API.
 
 There are two resource types:
 
-* Cluster Managers, that basically are instances of Cluster API that live in Projects provided by Unikorn Identity.
+* Cluster Managers, that basically are instances of Cluster API that live in Projects provided by the Identity service.
 * Clusters, are Kubernetes clusters, and managed by cluster managers.
 
 Cluster managers are actually contained themselves in virtual clusters, this allows horizontal scaling and multi-tenant separation.
 
 ### Services
 
-Unikorn is split up into domain specific micro-services:
+This service is split up into domain specific micro-services:
 
 * Cluster manager and cluster controllers.
   These are reactive services that watch for resource changes, then reconcile reality against the requested state.
-* Server is a RESTful interface that manages Unikorn resource types.
+* Server is a RESTful interface that manages our custom resource types.
   As it's intended as a public API e.g. for Terraform or a user interface, it integrates authn/authz functionality too.
-* Monitor is a daemon that periodically polls Unikorn resource types, and provides functionality that cannot be triggered by reactive controllers.
+* Monitor is a daemon that periodically polls out custome resource types, and provides functionality that cannot be triggered by reactive controllers.
   Most notably, this includes automatic upgrades.
 
 ## Installation
 
-### Unikorn Prerequisites
+### Prerequisites
 
 The use the Kubernetes service you first need to install:
 
@@ -43,7 +43,7 @@ As this is a private repository, we're keeping the charts private for now also, 
 
 #### Installing ArgoCD
 
-ArgoCD is a **required** to use Unikorn.
+ArgoCD is a **required** to use this service.
 
 Deploy Argo using Helm (the release name is _hard coded_, don't change it yet please):
 
@@ -55,7 +55,7 @@ helm install argocd argo/argo-cd -n argocd --create-namespace
 
 #### Installing Prerequisites
 
-The Unikorn server component has a couple prerequisites that are required for correct functionality.
+The server component has a couple prerequisites that are required for correct functionality.
 If not installing server you can skip to the next section.
 
 You'll need to install:
@@ -185,9 +185,9 @@ spec:
 
 ### Configuring Service Authentication and Authorization
 
-The [Unikorn Identity Service](https://github.com/unikorn-cloud/identity) describes how to configure a service organization, groups and role mappings for services that require them.
+The [Identity Service](https://github.com/unikorn-cloud/identity) describes how to configure a service organization, groups and role mappings for services that require them.
 
-This service requires asynchronous access to the Unikorn Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
+This service requires asynchronous access to the Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
 
 This service defines the `unikorn-kubernetes` user that will need to be added to a group in the service organization.
 It will need the built in role `infra-manager-service` that allows:
@@ -205,7 +205,7 @@ See the [monitoring & logging](docs/monitoring.md) documentation from more infor
 
 ## Documentation
 
-### API (Unikorn Server)
+### API
 
 Consult the [server API documentation](pkg/server/README.md) to get started.
 

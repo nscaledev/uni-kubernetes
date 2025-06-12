@@ -41,18 +41,18 @@ type Provisioner struct{}
 // Ensure the Provisioner interface is implemented.
 var _ application.ValuesGenerator = &Provisioner{}
 
-func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersion) (interface{}, error) {
+func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersion) (any, error) {
 	//nolint:forcetypeassert
 	cluster := application.FromContext(ctx).(*unikornv1.KubernetesCluster)
 
 	// Scale to zero support.
-	operatorValues := map[string]interface{}{
+	operatorValues := map[string]any{
 		"nodeSelector": util.ControlPlaneNodeSelector(),
 	}
 
 	// If the cluster CP has one node, then this will fail to deploy
 	// as cilium has 2 as the default, we need to work some magic here.
-	if *cluster.Spec.ControlPlane.Replicas == 1 {
+	if cluster.Spec.ControlPlane.Replicas == 1 {
 		operatorValues["replicas"] = cluster.Spec.ControlPlane.Replicas
 	}
 	// We run in sans-kube-proxy mode, as it's faster and doesn't involve
@@ -70,25 +70,25 @@ func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersio
 		return nil, fmt.Errorf("%w: missing cluster host:port", coreerrors.ErrInvalidContext)
 	}
 
-	values := map[string]interface{}{
+	values := map[string]any{
 		"operator":             operatorValues,
 		"kubeProxyReplacement": "true",
 		"k8sServiceHost":       clusterContext.Host,
 		"k8sServicePort":       clusterContext.Port,
-		"hubble": map[string]interface{}{
-			"relay": map[string]interface{}{
+		"hubble": map[string]any{
+			"relay": map[string]any{
 				"nodeSelector": util.ControlPlaneNodeSelector(),
 				"tolerations":  util.ControlPlaneTolerations(),
 			},
-			"ui": map[string]interface{}{
+			"ui": map[string]any{
 				"nodeSelector": util.ControlPlaneNodeSelector(),
 				"tolerations":  util.ControlPlaneTolerations(),
 			},
 		},
-		"ipam": map[string]interface{}{
-			"operator": map[string]interface{}{
-				"clusterPoolIPv4PodCIDRList": []interface{}{
-					cluster.Spec.Network.PodNetwork.IPNet.String(),
+		"ipam": map[string]any{
+			"operator": map[string]any{
+				"clusterPoolIPv4PodCIDRList": []any{
+					cluster.Spec.Network.PodNetwork.String(),
 				},
 			},
 		},

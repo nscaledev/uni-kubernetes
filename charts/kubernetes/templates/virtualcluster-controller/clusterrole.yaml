@@ -1,0 +1,56 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ .Release.Name }}-virtualcluster-controller
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+rules:
+# Manage virtual kubernetes clusters (my job).
+- apiGroups:
+  - unikorn-cloud.org
+  resources:
+  - virtualkubernetesclusters
+  verbs:
+  - list
+  - get
+  - patch
+  - watch
+  - update
+- apiGroups:
+  - unikorn-cloud.org
+  resources:
+  - virtualkubernetesclusters/status
+  verbs:
+  - update
+# Get application bundles
+- apiGroups:
+  - unikorn-cloud.org
+  resources:
+  - helmapplications
+  - virtualkubernetesclusterapplicationbundles
+  verbs:
+  - list
+  - watch
+# ArgoCD integration.
+- apiGroups:
+  - argoproj.io
+  resources:
+  - applications
+  verbs:
+  - create
+  - list
+  - get
+  - watch
+  - patch
+  - delete
+# ArgoCD integration (access to API secret).
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - list
+  - watch
+  - create
+  - patch
+  - delete

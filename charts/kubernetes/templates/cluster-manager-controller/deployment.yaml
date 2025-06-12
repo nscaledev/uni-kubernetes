@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: unikorn-cluster-manager-controller
+  name: {{ .Release.Name }}-cluster-manager-controller
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: unikorn-cluster-manager-controller
+      app: {{ .Release.Name }}-cluster-manager-controller
   template:
     metadata:
       labels:
-        app: unikorn-cluster-manager-controller
+        app: {{ .Release.Name }}-cluster-manager-controller
     spec:
       containers:
-      - name: unikorn-cluster-manager-controller
+      - name: {{ .Release.Name }}-cluster-manager-controller
         image: {{ include "unikorn.clusterManagerControllerImage" . }}
         args:
         {{- include "unikorn.core.flags" . | nindent 8 }}
@@ -24,14 +24,9 @@ spec:
         - name: prometheus
           containerPort: 8080
         resources:
-          requests:
-            cpu: 50m
-            memory: 50Mi
-          limits:
-            cpu: 100m
-            memory: 100Mi
+          {{- .Values.clusterManagerController.resources | toYaml | nindent 10 }}
         securityContext:
           readOnlyRootFilesystem: true
-      serviceAccountName: unikorn-cluster-manager-controller
+      serviceAccountName: {{ .Release.Name }}-cluster-manager-controller
       securityContext:
         runAsNonRoot: true

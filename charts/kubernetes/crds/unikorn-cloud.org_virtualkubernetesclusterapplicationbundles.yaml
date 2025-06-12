@@ -1,0 +1,122 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.3
+  name: virtualkubernetesclusterapplicationbundles.unikorn-cloud.org
+spec:
+  group: unikorn-cloud.org
+  names:
+    categories:
+    - unikorn
+    kind: VirtualKubernetesClusterApplicationBundle
+    listKind: VirtualKubernetesClusterApplicationBundleList
+    plural: virtualkubernetesclusterapplicationbundles
+    singular: virtualkubernetesclusterapplicationbundle
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.version
+      name: version
+      type: string
+    - jsonPath: .spec.preview
+      name: preview
+      type: string
+    - jsonPath: .spec.endOfLife
+      name: end of life
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          VirtualKubernetesClusterApplicationBundle defines a bundle of applications related with a particular
+          custom resource.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: ApplicationBundleSpec defines the requested resource state.
+            properties:
+              applications:
+                description: Applications is a list of application references for
+                  the bundle.
+                items:
+                  properties:
+                    name:
+                      description: |-
+                        Name is the name of the application.  This must match what is encoded into
+                        Unikorn's application management engine.
+                      type: string
+                    reference:
+                      description: Reference is a reference to the application definition.
+                      properties:
+                        kind:
+                          description: Kind is the kind of resource we are referencing.
+                          enum:
+                          - HelmApplication
+                          type: string
+                        name:
+                          description: Name is the name of the resource we are referencing.
+                          type: string
+                        version:
+                          description: Version is the version of the application within
+                            the application type.
+                          pattern: ^v?[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$
+                          type: string
+                      required:
+                      - kind
+                      - name
+                      - version
+                      type: object
+                  required:
+                  - name
+                  - reference
+                  type: object
+                type: array
+              endOfLife:
+                description: |-
+                  EndOfLife marks when this bundle should not be advertised any more
+                  by Unikorn server.  It also provides a hint that users should upgrade
+                  ahead of the deadline, or that a forced upgrade should be triggered.
+                format: date-time
+                type: string
+              preview:
+                description: |-
+                  Preview indicates that this bundle is a preview and should not be
+                  used by default.
+                type: boolean
+              version:
+                description: Version is a semantic version of the bundle, must be
+                  unique.
+                pattern: ^v?[0-9]+(\.[0-9]+)?(\.[0-9]+)?(-([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?(\+([0-9A-Za-z\-]+(\.[0-9A-Za-z\-]+)*))?$
+                type: string
+            required:
+            - version
+            type: object
+          status:
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

@@ -32,19 +32,19 @@ func New(getApplication application.GetterFunc) *application.Provisioner {
 	return application.New(getApplication).WithGenerator(&Provisioner{})
 }
 
-func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (interface{}, error) {
+func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (any, error) {
 	// Inject tolerations to allow cluster provisoning, especially useful for
 	// baremetal where the nodes take ages to come into existence and Argo decides
 	// it's going to give up trying to sync.
-	values := map[string]interface{}{
+	values := map[string]any{
 		"tolerations": util.ControlPlaneTolerations(),
-		"webhook": map[string]interface{}{
+		"webhook": map[string]any{
 			"tolerations": util.ControlPlaneTolerations(),
 		},
-		"cainjector": map[string]interface{}{
+		"cainjector": map[string]any{
 			"tolerations": util.ControlPlaneTolerations(),
 		},
-		"startupapicheck": map[string]interface{}{
+		"startupapicheck": map[string]any{
 			"tolerations": util.ControlPlaneTolerations(),
 		},
 	}

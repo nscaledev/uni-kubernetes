@@ -23,6 +23,11 @@ import (
 
 	"github.com/spf13/pflag"
 
+	"github.com/unikorn-cloud/core/pkg/cd"
+	"github.com/unikorn-cloud/core/pkg/cd/argocd"
+	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
+	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
+	"github.com/unikorn-cloud/kubernetes/pkg/monitor/health"
 	upgradecluster "github.com/unikorn-cloud/kubernetes/pkg/monitor/upgrade/cluster"
 	upgradeclustermanager "github.com/unikorn-cloud/kubernetes/pkg/monitor/upgrade/clustermanager"
 
@@ -36,11 +41,26 @@ type Options struct {
 	// run with high frequency, reads are all cached.  It's mostly down to
 	// burning CPU unnecessarily.
 	pollPeriod time.Duration
+
+	// cdDriver defines the continuous-delivery backend driver to use
+	// to manage applications.
+	cdDriver cd.DriverKindFlag
 }
 
 // AddFlags registers option flags with pflag.
 func (o *Options) AddFlags(flags *pflag.FlagSet) {
+	o.cdDriver.Kind = cd.DriverKindArgoCD
+
 	flags.DurationVar(&o.pollPeriod, "poll-period", time.Minute, "Period to poll for updates")
+	flags.Var(&o.cdDriver, "cd-driver", "CD backend driver to use from [argocd]")
+}
+
+func (o *Options) getDriver(client client.Client) (cd.Driver, error) {
+	if o.cdDriver.Kind != cd.DriverKindArgoCD {
+		return nil, coreerrors.ErrCDDriver
+	}
+
+	return argocd.New(client, argocd.Options{}), nil
 }
 
 // Checker is an interface that monitors must implement.
@@ -56,9 +76,17 @@ func Run(ctx context.Context, c client.Client, o *Options) {
 	ticker := time.NewTicker(o.pollPeriod)
 	defer ticker.Stop()
 
+	driver, err := o.getDriver(c)
+	if err != nil {
+		panic(err)
+	}
+
 	checkers := []Checker{
 		upgradecluster.New(c),
 		upgradeclustermanager.New(c),
+		health.New(c, driver, &unikornv1.ClusterManagerList{}),
+		health.New(c, driver, &unikornv1.KubernetesClusterList{}),
+		health.New(c, driver, &unikornv1.VirtualKubernetesClusterList{}),
 	}
 
 	for {

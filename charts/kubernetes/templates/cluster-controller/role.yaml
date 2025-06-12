@@ -1,7 +1,7 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: unikorn-cluster-controller
+  name: {{ .Release.Name }}-cluster-controller
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 rules:

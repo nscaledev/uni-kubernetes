@@ -1,21 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: unikorn-server
+  name: {{ .Release.Name }}-server
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: unikorn-server
+      app: {{ .Release.Name }}-server
   template:
     metadata:
       labels:
-        app: unikorn-server
+        app: {{ .Release.Name }}-server
     spec:
       containers:
-      - name: unikorn-server
+      - name: {{ .Release.Name }}-server
         image: {{ include "unikorn.serverImage" . }}
         args:
         {{- include "unikorn.core.flags" . | nindent 8 }}
@@ -23,8 +23,7 @@ spec:
         {{- include "unikorn.otlp.flags" . | nindent 8 }}
         {{- include "unikorn.identity.flags" . | nindent 8 }}
         {{- include "unikorn.region.flags" . | nindent 8 }}
-        - --client-certificate-namespace={{ .Release.Namespace }}
-        - --client-certificate-name=unikorn-kubernetes-client-certificate
+        {{- include "unikorn.mtls.flags" . | nindent 8 }}
         ports:
         - name: http
           containerPort: 6080
@@ -33,14 +32,9 @@ spec:
         - name: pprof
           containerPort: 6060
         resources:
-          requests:
-            cpu: "50m"
-            memory: 50Mi
-          limits:
-            cpu: "100m"
-            memory: 100Mi
+          {{- .Values.server.resources | toYaml | nindent 10 }}
         securityContext:
           readOnlyRootFilesystem: true
-      serviceAccountName: unikorn-server
+      serviceAccountName: {{ .Release.Name }}-server
       securityContext:
         runAsNonRoot: true

@@ -38,25 +38,24 @@ type Provisioner struct{}
 var _ application.ValuesGenerator = &Provisioner{}
 
 // Generate implements the application.Generator interface.
-func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (interface{}, error) {
-	// We limit images to those with the driver pre-installed as it's far quicker for UX.
-	// Also the default affinity is broken and prevents scale to zero, also tolerations
+func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (any, error) {
+	// The default affinity is broken and prevents scale to zero, also tolerations
 	// don't allow execution using our default taints.
 	// TODO: This includes the node-feature-discovery as a subchart, and doesn't expose
 	// node selectors/tolerations, however, it does scale to zero.
-	values := map[string]interface{}{
-		"driver": map[string]interface{}{
+	values := map[string]any{
+		"driver": map[string]any{
 			"enabled": false,
 		},
-		"operator": map[string]interface{}{
-			"affinity": map[string]interface{}{
-				"nodeAffinity": map[string]interface{}{
+		"operator": map[string]any{
+			"affinity": map[string]any{
+				"nodeAffinity": map[string]any{
 					"preferredDuringSchedulingIgnoredDuringExecution": nil,
-					"requiredDuringSchedulingIgnoredDuringExecution": map[string]interface{}{
-						"nodeSelectorTerms": []interface{}{
-							map[string]interface{}{
-								"matchExpressions": []interface{}{
-									map[string]interface{}{
+					"requiredDuringSchedulingIgnoredDuringExecution": map[string]any{
+						"nodeSelectorTerms": []any{
+							map[string]any{
+								"matchExpressions": []any{
+									map[string]any{
 										"key":      "node-role.kubernetes.io/control-plane",
 										"operator": "Exists",
 									},

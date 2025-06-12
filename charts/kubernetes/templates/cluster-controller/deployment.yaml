@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: unikorn-cluster-controller
+  name: {{ .Release.Name }}-cluster-controller
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 spec:
@@ -22,20 +22,14 @@ spec:
         {{- include "unikorn.identity.flags" . | nindent 8 }}
         {{- include "unikorn.region.flags" . | nindent 8 }}
         {{- include "unikorn.otlp.flags" . | nindent 8 }}
-        - --client-certificate-namespace={{ .Release.Namespace }}
-        - --client-certificate-name=unikorn-kubernetes-client-certificate
+        {{- include "unikorn.mtls.flags" . | nindent 8 }}
         ports:
         - name: prometheus
           containerPort: 8080
         resources:
-          requests:
-            cpu: 50m
-            memory: 50Mi
-          limits:
-            cpu: 100m
-            memory: 100Mi
+          {{- .Values.clusterController.resources | toYaml | nindent 10 }}
         securityContext:
           readOnlyRootFilesystem: true
-      serviceAccountName: unikorn-cluster-controller
+      serviceAccountName: {{ .Release.Name }}-cluster-controller
       securityContext:
         runAsNonRoot: true

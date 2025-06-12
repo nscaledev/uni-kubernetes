@@ -67,7 +67,7 @@ func (p *Provisioner) getOwnedResource(ctx context.Context, c client.Client, api
 	cluster := application.FromContext(ctx).(*unikornv1.KubernetesCluster)
 
 	objects := &unstructured.UnstructuredList{
-		Object: map[string]interface{}{
+		Object: map[string]any{
 			"apiVersion": apiVersion,
 			"kind":       kind,
 		},

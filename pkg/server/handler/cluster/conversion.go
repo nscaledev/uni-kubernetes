@@ -27,13 +27,11 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
-	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -60,7 +58,7 @@ type generator struct {
 	// options allows access to resource defaults.
 	options *Options
 	// region is a client to access regions.
-	region regionapi.ClientWithResponsesInterface
+	region *region.Client
 	// namespace the resource is provisioned in.
 	namespace string
 	// organizationID is the unique organization identifier.
@@ -74,7 +72,7 @@ type generator struct {
 	existing *unikornv1.KubernetesCluster
 }
 
-func newGenerator(client client.Client, options *Options, region regionapi.ClientWithResponsesInterface, namespace, organizationID, projectID string) *generator {
+func newGenerator(client client.Client, options *Options, region *region.Client, namespace, organizationID, projectID string) *generator {
 	return &generator{
 		client:         client,
 		options:        options,
@@ -94,8 +92,8 @@ func (g *generator) withExisting(existing *unikornv1.KubernetesCluster) *generat
 // convertMachine converts from a custom resource into the API definition.
 func convertMachine(in *unikornv1core.MachineGeneric) *openapi.MachinePool {
 	machine := &openapi.MachinePool{
-		Replicas: in.Replicas,
-		FlavorId: in.FlavorID,
+		Replicas: &in.Replicas,
+		FlavorId: &in.FlavorID,
 	}
 
 	if in.DiskSize != nil {
@@ -111,16 +109,16 @@ func convertMachine(in *unikornv1core.MachineGeneric) *openapi.MachinePool {
 func convertWorkloadPool(in *unikornv1.KubernetesClusterWorkloadPoolsPoolSpec) openapi.KubernetesClusterWorkloadPool {
 	workloadPool := openapi.KubernetesClusterWorkloadPool{
 		Name:    in.Name,
-		Machine: *convertMachine(&in.KubernetesWorkloadPoolSpec.MachineGeneric),
+		Machine: *convertMachine(&in.MachineGeneric),
 	}
 
-	if in.KubernetesWorkloadPoolSpec.Labels != nil {
-		workloadPool.Labels = &in.KubernetesWorkloadPoolSpec.Labels
+	if in.Labels != nil {
+		workloadPool.Labels = &in.Labels
 	}
 
-	if in.KubernetesWorkloadPoolSpec.Autoscaling != nil {
+	if in.Autoscaling != nil {
 		workloadPool.Autoscaling = &openapi.KubernetesClusterAutoscaling{
-			MinimumReplicas: *in.KubernetesWorkloadPoolSpec.Autoscaling.MinimumReplicas,
+			MinimumReplicas: in.Autoscaling.MinimumReplicas,
 		}
 	}
 
@@ -180,18 +178,12 @@ func convertAutoUpgrade(in *unikornv1.ApplicationBundleAutoUpgradeSpec) *openapi
 
 // convert converts from a custom resource into the API definition.
 func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
-	provisioningStatus := coreopenapi.ResourceProvisioningStatusUnknown
-
-	if condition, err := in.StatusConditionRead(unikornv1core.ConditionAvailable); err == nil {
-		provisioningStatus = conversion.ConvertStatusCondition(condition)
-	}
-
 	out := &openapi.KubernetesClusterRead{
-		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags, provisioningStatus),
+		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags),
 		Spec: openapi.KubernetesClusterSpec{
 			RegionId:              in.Spec.RegionID,
 			ClusterManagerId:      &in.Spec.ClusterManagerID,
-			ApplicationBundleName: in.Spec.ApplicationBundle,
+			ApplicationBundleName: &in.Spec.ApplicationBundle,
 			AutoUpgrade:           convertAutoUpgrade(in.Spec.ApplicationBundleAutoUpgrade),
 			Version:               in.Spec.Version.Original(),
 			WorkloadPools:         convertWorkloadPools(in),
@@ -213,14 +205,14 @@ func convertList(in *unikornv1.KubernetesClusterList) openapi.KubernetesClusters
 }
 
 // defaultApplicationBundle returns a default application bundle.
-func (g *generator) defaultApplicationBundle(ctx context.Context) (*unikornv1.KubernetesClusterApplicationBundle, error) {
-	applicationBundles, err := applicationbundle.NewClient(g.client).ListCluster(ctx)
+func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.KubernetesClusterApplicationBundle, error) {
+	applicationBundles, err := appclient.ListCluster(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.KubernetesClusterApplicationBundle) bool {
-		if bundle.Spec.Preview != nil && *bundle.Spec.Preview {
+		if bundle.Spec.Preview {
 			return true
 		}
 
@@ -241,7 +233,7 @@ func (g *generator) defaultApplicationBundle(ctx context.Context) (*unikornv1.Ku
 
 // defaultControlPlaneFlavor returns a default control plane flavor.
 func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *openapi.KubernetesClusterWrite) (*regionapi.Flavor, error) {
-	flavors, err := region.Flavors(ctx, g.region, g.organizationID, request.Spec.RegionId)
+	flavors, err := g.region.Flavors(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("failed to list flavors").WithError(err)
 	}
@@ -278,7 +270,7 @@ func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *open
 // defaultImage returns a default image for either control planes or workload pools
 // based on the specified Kubernetes version.
 func (g *generator) defaultImage(ctx context.Context, request *openapi.KubernetesClusterWrite) (*regionapi.Image, error) {
-	images, err := region.Images(ctx, g.region, g.organizationID, request.Spec.RegionId)
+	images, err := g.region.Images(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("failed to list images").WithError(err)
 	}
@@ -386,11 +378,11 @@ func (g *generator) generateNetwork(request *openapi.KubernetesClusterNetwork) (
 
 	network := &unikornv1.KubernetesClusterNetworkSpec{
 		NetworkGeneric: unikornv1core.NetworkGeneric{
-			NodeNetwork:    &unikornv1core.IPv4Prefix{IPNet: nodeNetwork},
+			NodeNetwork:    unikornv1core.IPv4Prefix{IPNet: nodeNetwork},
 			DNSNameservers: unikornv1core.IPv4AddressSliceFromIPSlice(dnsNameservers),
 		},
-		ServiceNetwork: &unikornv1core.IPv4Prefix{IPNet: serviceNetwork},
-		PodNetwork:     &unikornv1core.IPv4Prefix{IPNet: podNetwork},
+		ServiceNetwork: unikornv1core.IPv4Prefix{IPNet: serviceNetwork},
+		PodNetwork:     unikornv1core.IPv4Prefix{IPNet: podNetwork},
 	}
 
 	return network, nil
@@ -399,17 +391,20 @@ func (g *generator) generateNetwork(request *openapi.KubernetesClusterNetwork) (
 // generateMachineGeneric generates a generic machine part of the cluster.
 func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi.KubernetesClusterWrite, m *openapi.MachinePool, imageID *string) (*unikornv1core.MachineGeneric, error) {
 	machine := &unikornv1core.MachineGeneric{
-		Replicas: m.Replicas,
-		FlavorID: m.FlavorId,
-		ImageID:  imageID,
+		Replicas: *m.Replicas,
+		FlavorID: *m.FlavorId,
 	}
 
-	newImageID, err := g.imageID(ctx, request, imageID)
-	if err != nil {
-		return nil, err
+	if imageID == nil {
+		temp, err := g.imageID(ctx, request, imageID)
+		if err != nil {
+			return nil, err
+		}
+
+		imageID = temp
 	}
 
-	machine.ImageID = newImageID
+	machine.ImageID = *imageID
 
 	if m.Disk != nil {
 		size, err := resource.ParseQuantity(fmt.Sprintf("%dGi", m.Disk.Size))
@@ -434,10 +429,10 @@ func (g *generator) generateControlPlane(ctx context.Context, request *openapi.K
 	}
 
 	if g.existing != nil {
-		imageID = g.existing.Spec.ControlPlane.ImageID
+		imageID = &g.existing.Spec.ControlPlane.ImageID
 
-		machineOptions.Replicas = g.existing.Spec.ControlPlane.Replicas
-		machineOptions.FlavorId = g.existing.Spec.ControlPlane.FlavorID
+		machineOptions.Replicas = &g.existing.Spec.ControlPlane.Replicas
+		machineOptions.FlavorId = &g.existing.Spec.ControlPlane.FlavorID
 	}
 
 	// Add in any missing defaults.
@@ -470,7 +465,7 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 
 		if g.existing != nil {
 			if pool := g.existing.GetWorkloadPool(pool.Name); pool != nil {
-				imageID = pool.ImageID
+				imageID = &pool.ImageID
 			}
 		}
 
@@ -495,8 +490,7 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 		// complexity to the client via the API.
 		if pool.Autoscaling != nil {
 			workloadPool.Autoscaling = &unikornv1.MachineGenericAutoscaling{
-				MinimumReplicas: &pool.Autoscaling.MinimumReplicas,
-				MaximumReplicas: pool.Machine.Replicas,
+				MinimumReplicas: pool.Autoscaling.MinimumReplicas,
 			}
 		}
 
@@ -508,24 +502,24 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 
 // generateApplicationBundleName either selects a default or an explicit version on
 // cluster creation, and preserves or uses an explicit version on update.
-func (g *generator) generateApplicationBundleName(ctx context.Context, in *openapi.KubernetesClusterWrite) (*string, error) {
+func (g *generator) generateApplicationBundleName(ctx context.Context, appclient appBundleLister, in *openapi.KubernetesClusterWrite) (string, error) {
 	// Cluster creation...
 	if g.existing == nil {
 		if in.Spec.ApplicationBundleName != nil {
-			return in.Spec.ApplicationBundleName, nil
+			return *in.Spec.ApplicationBundleName, nil
 		}
 
-		bundle, err := g.defaultApplicationBundle(ctx)
+		bundle, err := g.defaultApplicationBundle(ctx, appclient)
 		if err != nil {
-			return nil, err
+			return "", err
 		}
 
-		return &bundle.Name, nil
+		return bundle.Name, nil
 	}
 
 	// Cluster update...
 	if in.Spec.ApplicationBundleName != nil {
-		return in.Spec.ApplicationBundleName, nil
+		return *in.Spec.ApplicationBundleName, nil
 	}
 
 	return g.existing.Spec.ApplicationBundle, nil
@@ -582,7 +576,7 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster
 // generate generates the full cluster custom resource.
 // TODO: there are a lot of parameters being passed about, we should make this
 // a struct and pass them as a single blob.
-func (g *generator) generate(ctx context.Context, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
+func (g *generator) generate(ctx context.Context, appclient appBundleLister, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
 	kubernetesControlPlane, err := g.generateControlPlane(ctx, request)
 	if err != nil {
 		return nil, err
@@ -593,7 +587,7 @@ func (g *generator) generate(ctx context.Context, request *openapi.KubernetesClu
 		return nil, err
 	}
 
-	applicationBundleName, err := g.generateApplicationBundleName(ctx, request)
+	applicationBundleName, err := g.generateApplicationBundleName(ctx, appclient, request)
 	if err != nil {
 		return nil, err
 	}
@@ -624,18 +618,18 @@ func (g *generator) generate(ctx context.Context, request *openapi.KubernetesClu
 			Tags:             conversion.GenerateTagList(request.Metadata.Tags),
 			RegionID:         request.Spec.RegionId,
 			ClusterManagerID: *request.Spec.ClusterManagerId,
-			Version: &unikornv1core.SemanticVersion{
+			Version: unikornv1core.SemanticVersion{
 				Version: *version,
 			},
 			ApplicationBundle:            applicationBundleName,
 			ApplicationBundleAutoUpgrade: generateAutoUpgrade(request.Spec.AutoUpgrade),
 			API:                          api,
-			Network:                      network,
-			ControlPlane:                 kubernetesControlPlane,
-			WorkloadPools:                kubernetesWorkloadPools,
+			Network:                      *network,
+			ControlPlane:                 *kubernetesControlPlane,
+			WorkloadPools:                *kubernetesWorkloadPools,
 			Features: &unikornv1.KubernetesClusterFeaturesSpec{
-				Autoscaling: ptr.To(true),
-				GPUOperator: ptr.To(true),
+				Autoscaling: true,
+				GPUOperator: true,
 			},
 		},
 	}

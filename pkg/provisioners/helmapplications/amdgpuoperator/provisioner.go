@@ -33,13 +33,13 @@ func New(getApplication application.GetterFunc) *application.Provisioner {
 	return application.New(getApplication).WithGenerator(p)
 }
 
-func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (interface{}, error) {
+func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (any, error) {
 	// Inject tolerations to allow cluster provisoning, especially useful for
 	// baremetal where the nodes take ages to come into existence and Argo decides
 	// it's going to give up trying to sync.
-	values := map[string]interface{}{
-		"node-feature-discovery": map[string]interface{}{
-			"gc": map[string]interface{}{
+	values := map[string]any{
+		"node-feature-discovery": map[string]any{
+			"gc": map[string]any{
 				"tolerations": util.ControlPlaneTolerations(),
 			},
 		},

@@ -79,16 +79,16 @@ func (p *Provisioner) getFlavor(flavorID string) (*regionapi.Flavor, error) {
 
 // generateMachineHelmValues translates the API's idea of a machine into what's
 // expected by the underlying Helm chart.
-func (p *Provisioner) generateMachineHelmValues(machine *unikornv1core.MachineGeneric, controlPlane bool) (map[string]interface{}, error) {
-	flavor, err := p.getFlavor(*machine.FlavorID)
+func (p *Provisioner) generateMachineHelmValues(machine *unikornv1core.MachineGeneric, controlPlane bool) (map[string]any, error) {
+	flavor, err := p.getFlavor(machine.FlavorID)
 	if err != nil {
 		return nil, err
 	}
 
 	// Translate from flavor ID to flavor name, because CAPO cannot accept one...
 	// https://github.com/kubernetes-sigs/cluster-api-provider-openstack/pull/2148
-	object := map[string]interface{}{
-		"imageID":  *machine.ImageID,
+	object := map[string]any{
+		"imageID":  machine.ImageID,
 		"flavorID": flavor.Metadata.Name,
 	}
 
@@ -97,7 +97,7 @@ func (p *Provisioner) generateMachineHelmValues(machine *unikornv1core.MachineGe
 	}
 
 	if machine.DiskSize != nil {
-		disk := map[string]interface{}{
+		disk := map[string]any{
 			"size": machine.DiskSize.Value() >> 30,
 		}
 
@@ -111,8 +111,8 @@ func (p *Provisioner) generateMachineHelmValues(machine *unikornv1core.MachineGe
 // what's expected by the underlying Helm chart.
 //
 //nolint:cyclop
-func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.KubernetesCluster, version unikornv1core.SemanticVersion) (map[string]interface{}, error) {
-	workloadPools := map[string]interface{}{}
+func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.KubernetesCluster, version unikornv1core.SemanticVersion) (map[string]any, error) {
+	workloadPools := map[string]any{}
 
 	for i := range cluster.Spec.WorkloadPools.Pools {
 		workloadPool := &cluster.Spec.WorkloadPools.Pools[i]
@@ -122,8 +122,8 @@ func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.Kubernet
 			return nil, err
 		}
 
-		object := map[string]interface{}{
-			"replicas": *workloadPool.Replicas,
+		object := map[string]any{
+			"replicas": workloadPool.Replicas,
 			"machine":  machine,
 		}
 
@@ -137,7 +137,7 @@ func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.Kubernet
 		}
 
 		if len(workloadPool.Labels) != 0 {
-			labels := map[string]interface{}{}
+			labels := map[string]any{}
 
 			for key, value := range workloadPool.Labels {
 				labels[key] = value
@@ -147,11 +147,11 @@ func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.Kubernet
 		}
 
 		if len(workloadPool.Files) != 0 {
-			files := make([]interface{}, len(workloadPool.Files))
+			files := make([]any, len(workloadPool.Files))
 
 			for i, file := range workloadPool.Files {
-				files[i] = map[string]interface{}{
-					"path":    *file.Path,
+				files[i] = map[string]any{
+					"path":    file.Path,
 					"content": base64.StdEncoding.EncodeToString(file.Content),
 				}
 			}
@@ -165,7 +165,7 @@ func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.Kubernet
 		}
 
 		if version.Compare(from) >= 0 {
-			object["kubelet"] = map[string]interface{}{
+			object["kubelet"] = map[string]any{
 				"serializeImagePulls":   false,
 				"maxParallelImagePulls": 3,
 			}
@@ -179,15 +179,15 @@ func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.Kubernet
 
 // generateWorkloadPoolSchedulerHelmValues translates from Kubernetes API scheduling
 // parameters into ones acceptable by Helm.
-func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.KubernetesClusterWorkloadPoolsPoolSpec) (map[string]interface{}, error) {
+func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.KubernetesClusterWorkloadPoolsPoolSpec) (map[string]any, error) {
 	// When scaler from zero is enabled, you need to provide CPU and memory hints,
 	// the autoscaler cannot guess the flavor attributes.
-	flavor, err := p.getFlavor(*pool.FlavorID)
+	flavor, err := p.getFlavor(pool.FlavorID)
 	if err != nil {
 		return nil, err
 	}
 
-	scheduling := map[string]interface{}{
+	scheduling := map[string]any{
 		"cpu":    flavor.Spec.Cpus,
 		"memory": fmt.Sprintf("%dG", flavor.Spec.Memory),
 	}
@@ -208,7 +208,7 @@ func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.Ku
 			return nil, fmt.Errorf("%w: unhandled gpu vendor case %s", ErrReference, flavor.Spec.Gpu.Vendor)
 		}
 
-		gpu := map[string]interface{}{
+		gpu := map[string]any{
 			"type":  t,
 			"count": flavor.Spec.Gpu.LogicalCount,
 		}
@@ -216,10 +216,10 @@ func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.Ku
 		scheduling["gpu"] = gpu
 	}
 
-	values := map[string]interface{}{
-		"limits": map[string]interface{}{
-			"minReplicas": *pool.Autoscaling.MinimumReplicas,
-			"maxReplicas": *pool.Autoscaling.MaximumReplicas,
+	values := map[string]any{
+		"limits": map[string]any{
+			"minReplicas": pool.Autoscaling.MinimumReplicas,
+			"maxReplicas": pool.Replicas,
 		},
 		"scheduler": scheduling,
 	}
@@ -227,34 +227,34 @@ func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.Ku
 	return values, nil
 }
 
-func (p *Provisioner) generateNetworkValues(cluster *unikornv1.KubernetesCluster) interface{} {
-	nameservers := make([]interface{}, len(cluster.Spec.Network.DNSNameservers))
+func (p *Provisioner) generateNetworkValues(cluster *unikornv1.KubernetesCluster) any {
+	nameservers := make([]any, len(cluster.Spec.Network.DNSNameservers))
 
 	for i, nameserver := range cluster.Spec.Network.DNSNameservers {
-		nameservers[i] = nameserver.IP.String()
+		nameservers[i] = nameserver.String()
 	}
 
-	values := map[string]interface{}{
-		"nodeCIDR": cluster.Spec.Network.NodeNetwork.IPNet.String(),
-		"serviceCIDRs": []interface{}{
-			cluster.Spec.Network.ServiceNetwork.IPNet.String(),
+	values := map[string]any{
+		"nodeCIDR": cluster.Spec.Network.NodeNetwork.String(),
+		"serviceCIDRs": []any{
+			cluster.Spec.Network.ServiceNetwork.String(),
 		},
-		"podCIDRs": []interface{}{
-			cluster.Spec.Network.PodNetwork.IPNet.String(),
+		"podCIDRs": []any{
+			cluster.Spec.Network.PodNetwork.String(),
 		},
 		"dnsNameservers": nameservers,
 	}
 
 	if p.options.ProviderNetwork != nil {
-		values["provider"] = map[string]interface{}{
+		values["provider"] = map[string]any{
 			"networkID": *p.options.ProviderNetwork.NetworkID,
 			"subnetID":  *p.options.ProviderNetwork.SubnetID,
 		}
 	}
 
 	if p.options.SSHKeyName != nil {
-		values["securityGroupRules"] = []interface{}{
-			map[string]interface{}{
+		values["securityGroupRules"] = []any{
+			map[string]any{
 				"name":         "ssh-ingress",
 				"direction":    "ingress",
 				"etherType":    "IPv4",
@@ -269,7 +269,7 @@ func (p *Provisioner) generateNetworkValues(cluster *unikornv1.KubernetesCluster
 }
 
 // Generate implements the application.Generator interface.
-func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (interface{}, error) {
+func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (any, error) {
 	//nolint:forcetypeassert
 	cluster := application.FromContext(ctx).(*unikornv1.KubernetesCluster)
 
@@ -278,7 +278,7 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		return nil, err
 	}
 
-	openstackValues := map[string]interface{}{
+	openstackValues := map[string]any{
 		"cloud":      p.options.Cloud,
 		"cloudsYAML": p.options.CloudConfig,
 	}
@@ -298,7 +298,7 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 
 	// These must have parity with what's defined by the API to make
 	// cross referencing between unikorn and openstack logging easier.
-	serverMetadata := map[string]interface{}{
+	serverMetadata := map[string]any{
 		"clusterKind":    "kubernetes",
 		"clusterID":      cluster.Name,
 		"projectID":      labels[constants.ProjectLabel],
@@ -306,23 +306,23 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 		"regionID":       cluster.Spec.RegionID,
 	}
 
-	machine, err := p.generateMachineHelmValues(cluster.Spec.ControlPlane, true)
+	machine, err := p.generateMachineHelmValues(&cluster.Spec.ControlPlane, true)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: generate types from the Helm values schema.
-	values := map[string]interface{}{
+	values := map[string]any{
 		"version":   ptr.To(cluster.Spec.Version.Original()),
 		"openstack": openstackValues,
-		"cluster": map[string]interface{}{
-			"taints": []interface{}{
+		"cluster": map[string]any{
+			"taints": []any{
 				// TODO: This is deprecated moving forward as the cilium operator provides these taints.
 				//   We can't remove it yet though as it'd break any deployments pre kubernetes-cluster-1.4.0
 
 				// This prevents things like coreDNS from coming up until
 				// the CNI is installed.
-				map[string]interface{}{
+				map[string]any{
 					"key":    "node.cilium.io/agent-not-ready",
 					"effect": "NoSchedule",
 					"value":  "true",
@@ -330,8 +330,8 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 			},
 			"serverMetadata": serverMetadata,
 		},
-		"controlPlane": map[string]interface{}{
-			"replicas": *cluster.Spec.ControlPlane.Replicas,
+		"controlPlane": map[string]any{
+			"replicas": cluster.Spec.ControlPlane.Replicas,
 			"machine":  machine,
 		},
 		"workloadPools": workloadPools,
@@ -339,7 +339,7 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 	}
 
 	if cluster.Spec.API != nil {
-		apiValues := map[string]interface{}{}
+		apiValues := map[string]any{}
 
 		if cluster.Spec.API.SubjectAlternativeNames != nil {
 			apiValues["certificateSANs"] = cluster.Spec.API.SubjectAlternativeNames
@@ -347,12 +347,12 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 
 		if cluster.Spec.API.AllowedPrefixes != nil {
 			// Add the SNAT IP so CAPI can manage the cluster.
-			allowList := []interface{}{
+			allowList := []any{
 				p.clusterManagerPrefix,
 			}
 
 			for _, prefix := range cluster.Spec.API.AllowedPrefixes {
-				allowList = append(allowList, prefix.IPNet.String())
+				allowList = append(allowList, prefix.String())
 			}
 
 			apiValues["allowList"] = allowList

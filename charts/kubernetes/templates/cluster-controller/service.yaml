@@ -1,12 +1,12 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: unikorn-cluster-controller
+  name: {{ .Release.Name }}-cluster-controller
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 spec:
   selector:
-    app: unikorn-cluster-controller
+    app: {{ .Release.Name }}-cluster-controller
   ports:
   - name: prometheus
     port: 8080

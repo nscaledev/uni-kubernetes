@@ -2,46 +2,76 @@
 repository: ghcr.io
 
 # Set the global container repo organization.
-organization: unikorn-cloud
+organization: nscaledev
 
 # Set the global container tag.
 # Defaults to the chart revision, which should be in lock-step with the
 # actual release.
 # tag:
 
-# Set the docker configuration, doing so will create a secret and link it
-# to the service accounts of all the controllers.  You can do something like:
-# --set dockerConfig=$(cat ~/.docker/config.json | base64 -w0)
-dockerConfig:
-
 # Set the image pull secret on the service accounts of all the controllers.
 # This is an alternative to dockerConfigs, but unlikely to play ball with
 # ArgoCD as it's a foreign object that needs pruning.
-imagePullSecret:
+imagePullSecret: ~
 
 # Cluster manager controller specific configuration.
 clusterManagerController:
   # Allows override of the global default image.
   image:
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
 
 # Cluster controller specific configuration.
 clusterController:
   # Allows override of the global default image.
   image:
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+# Virtual cluster controller specific configuration.
+virtualClusterController:
+  # Allows override of the global default image.
+  image: ~
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
+  # Sets the DDNS domain virtual clusters will be part of
+  virtualKubernetesClusterDomain: ~
+  # Tells the controller to use a nodeSelector when creating vClusters
+  nodeSelectorLabel: ""
+  nodeSelectorLabelIsPrefix: false
 
 # Monitor specific configuration.
 monitor:
   # Allows override of the global default image.
-  image:
-
-# Sets the DNS hosts/X.509 Certs.
-kubernetes:
-  host: unikorn.unikorn-cloud.org
+  image: ~
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
 
 # REST server specific configuration.
 server:
   # Allows override of the global default image.
   image:
+  # Allows resource limits to be set.
+  resources:
+    limits:
+      cpu: 100m
+      memory: 100Mi
+
+# Sets the DNS hosts/X.509 Certs.
+kubernetes:
+  host: unikorn.unikorn-cloud.org
 
 ingress:
   # Sets the ingress class to use.

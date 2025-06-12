@@ -146,7 +146,7 @@ func GenerateCloudConfig(options *kubernetesprovisioners.ClusterOpenstackOptions
 // Generate implements the application.Generator interface.
 // Note there is an option, to just pass through the clouds.yaml file, however
 // the chart doesn't allow it to be exposed so we need to translate between formats.
-func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersion) (interface{}, error) {
+func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersion) (any, error) {
 	cloudConfig, err := GenerateCloudConfig(p.options)
 	if err != nil {
 		return nil, err
@@ -160,8 +160,8 @@ func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersio
 	tolerations := util.ControlPlaneTolerations()
 	tolerations = append(tolerations, util.ControlPlaneInitTolerations()...)
 
-	values := map[string]interface{}{
-		"commonAnnotations": map[string]interface{}{
+	values := map[string]any{
+		"commonAnnotations": map[string]any{
 			constants.ConfigurationHashAnnotation: cloudConfigHash,
 		},
 		"cloudConfigContents": cloudConfig,

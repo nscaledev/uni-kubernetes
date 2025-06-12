@@ -4,12 +4,12 @@ description: A Helm chart for deploying Unikorn Kubernetes Service
 
 type: application
 
-version: v0.2.63-rc2
-appVersion: v0.2.63-rc2
+version: v1.3.0
+appVersion: v1.3.0
 
 icon: https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/dark-on-light/icon.png
 
 dependencies:
 - name: unikorn-common
-  version: v0.1.14
-  repository: https://unikorn-cloud.github.io/helm-common
+  version: v0.1.15
+  repository: https://nscaledev.github.io/uni-helm-common

@@ -41,6 +41,7 @@ import (
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
+	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	kubernetesprovisioners "github.com/unikorn-cloud/kubernetes/pkg/provisioners"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/amdgpuoperator"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/certmanager"
@@ -53,7 +54,6 @@ import (
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackcloudprovider"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackplugincindercsi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/vcluster"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -91,14 +91,10 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	key := client.ObjectKey{
-		Namespace: namespace,
-		Name:      *a.cluster.Spec.ApplicationBundle,
-	}
+	appclient := applicationbundle.NewClient(cli, namespace)
 
-	bundle := &unikornv1.KubernetesClusterApplicationBundle{}
-
-	if err := cli.Get(ctx, key, bundle); err != nil {
+	bundle, err := appclient.GetKubernetesCluster(ctx, a.cluster.Spec.ApplicationBundle)
+	if err != nil {
 		return nil, nil, err
 	}
 
@@ -107,14 +103,14 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	key = client.ObjectKey{
+	appkey := client.ObjectKey{
 		Namespace: namespace,
 		Name:      *reference.Name,
 	}
 
 	application := &unikornv1core.HelmApplication{}
 
-	if err := cli.Get(ctx, key, application); err != nil {
+	if err := cli.Get(ctx, appkey, application); err != nil {
 		return nil, nil, err
 	}
 
@@ -170,7 +166,7 @@ type Options struct {
 	// clientOptions give access to client certificate information as
 	// we need to talk to identity to get a token, and then to region
 	// to ensure cloud identities and networks are provisioned, as well
-	// as deptovisioning them.
+	// as deprovisioning them.
 	clientOptions coreclient.HTTPClientOptions
 }
 
@@ -259,12 +255,12 @@ func (p *Provisioner) getProvisionerOptions(options *kubernetesprovisioners.Clus
 		}
 
 		callback := func(flavor regionapi.Flavor) bool {
-			return flavor.Metadata.Id == *pool.FlavorID
+			return flavor.Metadata.Id == pool.FlavorID
 		}
 
 		index := slices.IndexFunc(options.Flavors, callback)
 		if index < 0 {
-			return nil, fmt.Errorf("%w: unable to lookup flavor %s", ErrResourceDependency, *pool.FlavorID)
+			return nil, fmt.Errorf("%w: unable to lookup flavor %s", ErrResourceDependency, pool.FlavorID)
 		}
 
 		flavor := &options.Flavors[index]
@@ -403,7 +399,7 @@ func (p *Provisioner) managerReady(ctx context.Context) error {
 }
 
 // getRegionClient returns an authenticated context with a client credentials access token
-// and a client.  The context must be used by subseqent API calls in order to extract
+// and a client.  The context must be used by subsequent API calls in order to extract
 // the access token.
 func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (context.Context, regionapi.ClientWithResponsesInterface, error) {
 	cli, err := coreclient.ProvisionerClientFromContext(ctx)
@@ -426,6 +422,21 @@ func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (co
 	}
 
 	return ctx, client, nil
+}
+
+func (p *Provisioner) getFlavors(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID, regionID string) ([]regionapi.Flavor, error) {
+	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+	}
+
+	flavors := *resp.JSON200
+
+	return flavors, nil
 }
 
 func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.IdentityRead, error) {
@@ -538,7 +549,7 @@ func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.Clie
 		return nil, err
 	}
 
-	flavors, err := region.Flavors(ctx, client, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Spec.RegionID)
+	flavors, err := p.getFlavors(ctx, client, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Spec.RegionID)
 	if err != nil {
 		return nil, err
 	}

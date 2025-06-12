@@ -42,7 +42,7 @@ jobs:
         git config user.name "$GITHUB_ACTOR"
         git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
     - name: Release Helm Chart
-      uses: unikorn-cloud/chart-release-action@v1
+      uses: nscaledev/uni-chart-release-action@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Release

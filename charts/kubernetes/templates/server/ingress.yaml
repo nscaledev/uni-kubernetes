@@ -1,7 +1,7 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: unikorn-server
+  name: {{ .Release.Name }}-server
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
   annotations:
@@ -21,7 +21,7 @@ spec:
   tls:
   - hosts:
     - {{ include "unikorn.kubernetes.host" . }}
-    secretName: unikorn-server-ingress-tls
+    secretName: {{ .Release.Name }}-server-ingress-tls
   rules:
   - host: {{ include "unikorn.kubernetes.host" . }}
     http:
@@ -30,6 +30,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: unikorn-server
+            name: {{ .Release.Name }}-server
             port:
               name: http

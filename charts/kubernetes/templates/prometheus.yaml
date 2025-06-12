@@ -2,7 +2,7 @@
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
-  name: unikorn-controller
+  name: {{ .Release.Name }}-controller
   namespace: {{ .Values.monitoring.namespace }}
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}

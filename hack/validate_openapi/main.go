@@ -29,7 +29,7 @@ import (
 //nolint:gochecknoglobals
 var failed bool
 
-func report(v ...interface{}) {
+func report(v ...any) {
 	fmt.Println(v...)
 
 	failed = true

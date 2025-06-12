@@ -29,7 +29,7 @@ import (
 
 var (
 	// On home broadband it'll take about 90s to pull down images, plus any
-	// readniness gates we put in the way.  If images are cached then 20s.
+	// readiness gates we put in the way.  If images are cached then 20s.
 	//nolint:gochecknoglobals
 	durationMetric = prometheus.NewHistogram(prometheus.HistogramOpts{
 		Name: "unikorn_vcluster_provision_duration",

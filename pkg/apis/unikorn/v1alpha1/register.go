@@ -50,8 +50,10 @@ var (
 func init() {
 	SchemeBuilder.Register(&ClusterManager{}, &ClusterManagerList{})
 	SchemeBuilder.Register(&KubernetesCluster{}, &KubernetesClusterList{})
+	SchemeBuilder.Register(&VirtualKubernetesCluster{}, &VirtualKubernetesClusterList{})
 	SchemeBuilder.Register(&ClusterManagerApplicationBundle{}, &ClusterManagerApplicationBundleList{})
 	SchemeBuilder.Register(&KubernetesClusterApplicationBundle{}, &KubernetesClusterApplicationBundleList{})
+	SchemeBuilder.Register(&VirtualKubernetesClusterApplicationBundle{}, &VirtualKubernetesClusterApplicationBundleList{})
 }
 
 // Resource maps a resource type to a group resource.

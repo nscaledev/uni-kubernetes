@@ -1,31 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: unikorn-monitor
+  name: {{ .Release.Name }}-monitor
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: unikorn-monitor
+      app: {{ .Release.Name }}-monitor
   template:
     metadata:
       labels:
-        app: unikorn-monitor
+        app: {{ .Release.Name }}-monitor
     spec:
       containers:
-      - name: unikorn-monitor
+      - name: {{ .Release.Name }}-monitor
         image: {{ include "unikorn.monitorImage" . }}
         resources:
-          requests:
-            cpu: 50m
-            memory: 50Mi
-          limits:
-            cpu: 100m
-            memory: 100Mi
+          {{- .Values.server.resources | toYaml | nindent 10 }}
         securityContext:
           readOnlyRootFilesystem: true
-      serviceAccountName: unikorn-monitor
+      serviceAccountName: {{ .Release.Name }}-monitor
       securityContext:
         runAsNonRoot: true

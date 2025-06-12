@@ -21,7 +21,6 @@ import (
 	"context"
 	"slices"
 
-	"github.com/unikorn-cloud/core/pkg/server/errors"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,9 +33,9 @@ type Client struct {
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client) *Client {
+func NewClient(c client.Client, namespace string) *Client {
 	return &Client{
-		client: client,
+		client: client.NewNamespacedClient(c, namespace),
 	}
 }
 
@@ -44,7 +43,7 @@ func (c *Client) GetClusterManager(ctx context.Context, name string) (*unikornv1
 	result := &unikornv1.ClusterManagerApplicationBundle{}
 
 	if err := c.client.Get(ctx, client.ObjectKey{Name: name}, result); err != nil {
-		return nil, errors.HTTPNotFound().WithError(err)
+		return nil, err
 	}
 
 	return result, nil
@@ -54,7 +53,17 @@ func (c *Client) GetKubernetesCluster(ctx context.Context, name string) (*unikor
 	result := &unikornv1.KubernetesClusterApplicationBundle{}
 
 	if err := c.client.Get(ctx, client.ObjectKey{Name: name}, result); err != nil {
-		return nil, errors.HTTPNotFound().WithError(err)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (c *Client) GetVirtualKubernetesCluster(ctx context.Context, name string) (*unikornv1.VirtualKubernetesClusterApplicationBundle, error) {
+	result := &unikornv1.VirtualKubernetesClusterApplicationBundle{}
+
+	if err := c.client.Get(ctx, client.ObjectKey{Name: name}, result); err != nil {
+		return nil, err
 	}
 
 	return result, nil
@@ -64,7 +73,7 @@ func (c *Client) ListClusterManager(ctx context.Context) (*unikornv1.ClusterMana
 	result := &unikornv1.ClusterManagerApplicationBundleList{}
 
 	if err := c.client.List(ctx, result); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		return nil, err
 	}
 
 	slices.SortStableFunc(result.Items, unikornv1.CompareClusterManagerApplicationBundle)
@@ -76,10 +85,22 @@ func (c *Client) ListCluster(ctx context.Context) (*unikornv1.KubernetesClusterA
 	result := &unikornv1.KubernetesClusterApplicationBundleList{}
 
 	if err := c.client.List(ctx, result); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		return nil, err
 	}
 
 	slices.SortStableFunc(result.Items, unikornv1.CompareKubernetesClusterApplicationBundle)
+
+	return result, nil
+}
+
+func (c *Client) ListVirtualCluster(ctx context.Context) (*unikornv1.VirtualKubernetesClusterApplicationBundleList, error) {
+	result := &unikornv1.VirtualKubernetesClusterApplicationBundleList{}
+
+	if err := c.client.List(ctx, result); err != nil {
+		return nil, err
+	}
+
+	slices.SortStableFunc(result.Items, unikornv1.CompareVirtualKubernetesClusterApplicationBundle)
 
 	return result, nil
 }

@@ -47,21 +47,21 @@ func (s *logSink) Enabled(_ int) bool {
 	return true
 }
 
-func (s *logSink) Info(_ int, msg string, kv ...interface{}) {
-	args := []interface{}{msg}
+func (s *logSink) Info(_ int, msg string, kv ...any) {
+	args := []any{msg}
 	args = append(args, kv...)
 
 	s.t.Log(args...)
 }
 
-func (s *logSink) Error(err error, msg string, kv ...interface{}) {
-	args := []interface{}{err, msg}
+func (s *logSink) Error(err error, msg string, kv ...any) {
+	args := []any{err, msg}
 	args = append(args, kv...)
 
 	s.t.Log(args...)
 }
 
-func (s *logSink) WithValues(_ ...interface{}) logr.LogSink {
+func (s *logSink) WithValues(_ ...any) logr.LogSink {
 	return s
 }
 
@@ -73,7 +73,7 @@ func (s *logSink) WithName(_ string) logr.LogSink {
 func testContext(t *testing.T) context.Context {
 	t.Helper()
 
-	return logr.NewContext(context.Background(), logr.New(&logSink{t: t}))
+	return logr.NewContext(t.Context(), logr.New(&logSink{t: t}))
 }
 
 // autoGeneratingUpgrader provides a "resource" that has auto upgrade
@@ -212,7 +212,7 @@ func TestGenerateTimeWindow(t *testing.T) {
 	// This is driven by RANDOM, so use enough iterations to be statistically
 	// significant.
 	for range samples {
-		window := util.TimeWindowFromResource(context.TODO(), &autoGeneratingUpgrader{})
+		window := util.TimeWindowFromResource(t.Context(), &autoGeneratingUpgrader{})
 
 		// We shouldn't be triggering fails unless we're in the office to
 		// deal with them.

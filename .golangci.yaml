@@ -1,41 +1,59 @@
-run:
-  timeout: 5m
+version: "2"
 linters:
-  enable-all: true
+  default: all
   disable:
-  - exhaustruct
-  - lll
-  - gofumpt
-  - rowserrcheck
-  - sqlclosecheck
-  - wastedassign
-  - forbidigo
-  - wrapcheck
-  - varnamelen
-  - gomnd
-  - ireturn
-  - godox
-  - funlen
-  - predeclared
-  - depguard
-  - goconst
-  - perfsprint
-  - mnd
-  - exportloopref
-  - execinquery
-linters-settings:
-  gci:
-    sections:
-    - standard
-    - default
-    - prefix(github.com/unikorn-cloud)
-    - prefix(k8s.io)
-    - prefix(sigs.k8s.io)
-    skip-generated: true
-  nlreturn:
-    block-size: 2
-issues:
-  # Too big a change in the context of a module upgrade.
-  exclude:
-  - if-return
-  - unused-parameter
+    - depguard
+    - exhaustruct
+    - forbidigo
+    - funlen
+    - goconst
+    - godox
+    - ireturn
+    - lll
+    - mnd
+    - perfsprint
+    - predeclared
+    - rowserrcheck
+    - sqlclosecheck
+    - varnamelen
+    - wastedassign
+    - wrapcheck
+    - funcorder
+  settings:
+    nlreturn:
+      block-size: 2
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: if-return
+      - path: (.+)\.go$
+        text: unused-parameter
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/unikorn-cloud)
+        - prefix(k8s.io)
+        - prefix(sigs.k8s.io)
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -21,7 +21,6 @@ import (
 	"context"
 	"slices"
 
-	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/core/pkg/constants"
 	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
@@ -29,7 +28,6 @@ import (
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/common"
 
 	corev1 "k8s.io/api/core/v1"
@@ -56,8 +54,12 @@ func NewClient(client client.Client) *Client {
 	}
 }
 
+type appBundleLister interface {
+	ListClusterManager(ctx context.Context) (*unikornv1.ClusterManagerApplicationBundleList, error)
+}
+
 // CreateImplicit is called when a cluster creation call is made and a control plane is not specified.
-func (c *Client) CreateImplicit(ctx context.Context, organizationID, projectID string) (*unikornv1.ClusterManager, error) {
+func (c *Client) CreateImplicit(ctx context.Context, appclient appBundleLister, organizationID, projectID string) (*unikornv1.ClusterManager, error) {
 	log := log.FromContext(ctx)
 
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
@@ -89,7 +91,7 @@ func (c *Client) CreateImplicit(ctx context.Context, organizationID, projectID s
 		},
 	}
 
-	resource, err := c.create(ctx, organizationID, projectID, request)
+	resource, err := c.create(ctx, appclient, organizationID, projectID, request)
 	if err != nil {
 		return nil, err
 	}
@@ -99,14 +101,8 @@ func (c *Client) CreateImplicit(ctx context.Context, organizationID, projectID s
 
 // convert converts from Kubernetes into OpenAPI types.
 func (c *Client) convert(in *unikornv1.ClusterManager) *openapi.ClusterManagerRead {
-	provisioningStatus := coreopenapi.ResourceProvisioningStatusUnknown
-
-	if condition, err := in.StatusConditionRead(unikornv1core.ConditionAvailable); err == nil {
-		provisioningStatus = conversion.ConvertStatusCondition(condition)
-	}
-
 	out := &openapi.ClusterManagerRead{
-		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags, provisioningStatus),
+		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags),
 	}
 
 	return out
@@ -164,14 +160,14 @@ func (c *Client) get(ctx context.Context, namespace, clusterManagerID string) (*
 }
 
 // defaultApplicationBundle returns a default application bundle.
-func (c *Client) defaultApplicationBundle(ctx context.Context) (*unikornv1.ClusterManagerApplicationBundle, error) {
-	applicationBundles, err := applicationbundle.NewClient(c.client).ListClusterManager(ctx)
+func (c *Client) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.ClusterManagerApplicationBundle, error) {
+	applicationBundles, err := appclient.ListClusterManager(ctx)
 	if err != nil {
-		return nil, err
+		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.ClusterManagerApplicationBundle) bool {
-		if bundle.Spec.Preview != nil && *bundle.Spec.Preview {
+		if bundle.Spec.Preview {
 			return true
 		}
 
@@ -196,8 +192,8 @@ func (c *Client) defaultApplicationBundle(ctx context.Context) (*unikornv1.Clust
 }
 
 // generate is a common function to create a Kubernetes type from an API one.
-func (c *Client) generate(ctx context.Context, namespace *corev1.Namespace, organizationID, projectID string, request *openapi.ClusterManagerWrite) (*unikornv1.ClusterManager, error) {
-	applicationBundle, err := c.defaultApplicationBundle(ctx)
+func (c *Client) generate(ctx context.Context, appclient appBundleLister, namespace *corev1.Namespace, organizationID, projectID string, request *openapi.ClusterManagerWrite) (*unikornv1.ClusterManager, error) {
+	applicationBundle, err := c.defaultApplicationBundle(ctx, appclient)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +207,7 @@ func (c *Client) generate(ctx context.Context, namespace *corev1.Namespace, orga
 		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, namespace.Name, info.Userinfo.Sub).WithOrganization(organizationID).WithProject(projectID).Get(),
 		Spec: unikornv1.ClusterManagerSpec{
 			Tags:                         conversion.GenerateTagList(request.Metadata.Tags),
-			ApplicationBundle:            &applicationBundle.Name,
+			ApplicationBundle:            applicationBundle.Name,
 			ApplicationBundleAutoUpgrade: &unikornv1.ApplicationBundleAutoUpgradeSpec{},
 		},
 	}
@@ -220,7 +216,7 @@ func (c *Client) generate(ctx context.Context, namespace *corev1.Namespace, orga
 }
 
 // Create creates a control plane.
-func (c *Client) create(ctx context.Context, organizationID, projectID string, request *openapi.ClusterManagerWrite) (*unikornv1.ClusterManager, error) {
+func (c *Client) create(ctx context.Context, appclient appBundleLister, organizationID, projectID string, request *openapi.ClusterManagerWrite) (*unikornv1.ClusterManager, error) {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -230,7 +226,7 @@ func (c *Client) create(ctx context.Context, organizationID, projectID string, r
 		return nil, errors.OAuth2InvalidRequest("project is being deleted")
 	}
 
-	resource, err := c.generate(ctx, namespace, organizationID, projectID, request)
+	resource, err := c.generate(ctx, appclient, namespace, organizationID, projectID, request)
 	if err != nil {
 		return nil, err
 	}
@@ -247,8 +243,8 @@ func (c *Client) create(ctx context.Context, organizationID, projectID string, r
 	return resource, nil
 }
 
-func (c *Client) Create(ctx context.Context, organizationID, projectID string, request *openapi.ClusterManagerWrite) (*openapi.ClusterManagerRead, error) {
-	result, err := c.create(ctx, organizationID, projectID, request)
+func (c *Client) Create(ctx context.Context, appclient appBundleLister, organizationID, projectID string, request *openapi.ClusterManagerWrite) (*openapi.ClusterManagerRead, error) {
+	result, err := c.create(ctx, appclient, organizationID, projectID, request)
 	if err != nil {
 		return nil, err
 	}
@@ -286,7 +282,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterM
 }
 
 // Update implements read/modify/write for the control plane.
-func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterManagerID string, request *openapi.ClusterManagerWrite) error {
+func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterManagerID string, request *openapi.ClusterManagerWrite) error {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return err
@@ -301,7 +297,7 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterM
 		return err
 	}
 
-	required, err := c.generate(ctx, namespace, organizationID, projectID, request)
+	required, err := c.generate(ctx, appclient, namespace, organizationID, projectID, request)
 	if err != nil {
 		return err
 	}

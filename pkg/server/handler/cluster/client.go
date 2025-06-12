@@ -40,6 +40,7 @@ import (
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/vcluster"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/clustermanager"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/common"
+	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/identity"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -85,27 +86,23 @@ type Client struct {
 	// client allows Kubernetes API access.
 	client client.Client
 
-	// namespace the controller runs in.
-	namespace string
-
 	// options control various defaults and the like.
 	options *Options
 
 	// identity is a client to access the identity service.
-	identity identityapi.ClientWithResponsesInterface
+	identity *identity.Client
 
 	// region is a client to access regions.
-	region regionapi.ClientWithResponsesInterface
+	region *region.Client
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, namespace string, options *Options, identity identityapi.ClientWithResponsesInterface, region regionapi.ClientWithResponsesInterface) *Client {
+func NewClient(client client.Client, options *Options, identity *identity.Client, region *region.Client) *Client {
 	return &Client{
-		client:    client,
-		namespace: namespace,
-		options:   options,
-		identity:  identity,
-		region:    region,
+		client:   client,
+		options:  options,
+		identity: identity,
+		region:   region,
 	}
 }
 
@@ -200,7 +197,7 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 }
 
 func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.KubernetesCluster) (*identityapi.AllocationWrite, error) {
-	flavors, err := region.Flavors(ctx, c.region, organizationID, resource.Spec.RegionID)
+	flavors, err := c.region.Flavors(ctx, organizationID, resource.Spec.RegionID)
 	if err != nil {
 		return nil, err
 	}
@@ -215,12 +212,11 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 
 	// NOTE: the control plane is "free".
 	for _, pool := range resource.Spec.WorkloadPools.Pools {
-		serversMinimum := *pool.Replicas
-		serversMaximum := *pool.Replicas
+		serversMinimum := pool.Replicas
+		serversMaximum := pool.Replicas
 
 		if pool.Autoscaling != nil {
-			serversMinimum = *pool.Autoscaling.MinimumReplicas
-			serversMaximum = *pool.Autoscaling.MaximumReplicas
+			serversMinimum = pool.Autoscaling.MinimumReplicas
 		}
 
 		reserved := serversMaximum - serversMinimum
@@ -229,7 +225,7 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 		serversReserved += reserved
 
 		flavorByID := func(f regionapi.Flavor) bool {
-			return f.Metadata.Id == *pool.FlavorID
+			return f.Metadata.Id == pool.FlavorID
 		}
 
 		index := slices.IndexFunc(flavors, flavorByID)
@@ -281,7 +277,12 @@ func (c *Client) createAllocation(ctx context.Context, organizationID, projectID
 		return nil, err
 	}
 
-	resp, err := c.identity.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, organizationID, projectID, *allocations)
+	client, err := c.identity.Client(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, organizationID, projectID, *allocations)
 	if err != nil {
 		return nil, err
 	}
@@ -299,7 +300,12 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 		return err
 	}
 
-	resp, err := c.identity.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
+	client, err := c.identity.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
 	if err != nil {
 		return err
 	}
@@ -312,7 +318,12 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 }
 
 func (c *Client) deleteAllocation(ctx context.Context, organizationID, projectID, allocationID string) error {
-	resp, err := c.identity.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, allocationID)
+	client, err := c.identity.Client(ctx)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, allocationID)
 	if err != nil {
 		return err
 	}
@@ -343,7 +354,12 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 		},
 	}
 
-	resp, err := c.region.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
+	client, err := c.region.Client(ctx)
+	if err != nil {
+		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
+	}
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("unable to create identity").WithError(err)
 	}
@@ -381,7 +397,12 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 		},
 	}
 
-	resp, err := c.region.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
+	client, err := c.region.Client(ctx)
+	if err != nil {
+		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
+	}
+
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("unable to physical network").WithError(err)
 	}
@@ -391,30 +412,6 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 	}
 
 	return resp.JSON201, nil
-}
-
-func (c *Client) getRegion(ctx context.Context, organizationID, regionID string) (*regionapi.RegionRead, error) {
-	// TODO: Need a straight get interface rather than a list.
-	resp, err := c.region.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
-	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to get region").WithError(err)
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return nil, errors.OAuth2ServerError("unable to get region")
-	}
-
-	results := *resp.JSON200
-
-	index := slices.IndexFunc(results, func(region regionapi.RegionRead) bool {
-		return region.Metadata.Id == regionID
-	})
-
-	if index < 0 {
-		return nil, errors.OAuth2ServerError("unable to get region")
-	}
-
-	return &results[index], nil
 }
 
 func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, allocation *identityapi.AllocationRead, identity *regionapi.IdentityRead, cluster *unikornv1.KubernetesCluster) error {
@@ -427,7 +424,7 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 	cluster.Annotations[constants.IdentityAnnotation] = identity.Metadata.Id
 
 	// Apply any region specific configuration based on feature flags.
-	region, err := c.getRegion(ctx, organizationID, regionID)
+	region, err := c.region.Get(ctx, organizationID, regionID)
 	if err != nil {
 		return err
 	}
@@ -474,8 +471,17 @@ func preserveAnnotations(requested, current *unikornv1.KubernetesCluster) error 
 	return nil
 }
 
-// Create creates the implicit cluster indentified by the JTW claims.
-func (c *Client) Create(ctx context.Context, organizationID, projectID string, request *openapi.KubernetesClusterWrite) (*openapi.KubernetesClusterRead, error) {
+type appBundleLister interface {
+	ListCluster(ctx context.Context) (*unikornv1.KubernetesClusterApplicationBundleList, error)
+}
+
+type appBundleListerPlus interface {
+	appBundleLister
+	ListClusterManager(ctx context.Context) (*unikornv1.ClusterManagerApplicationBundleList, error)
+}
+
+// Create creates the implicit cluster identified by the JTW claims.
+func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, organizationID, projectID string, request *openapi.KubernetesClusterWrite) (*openapi.KubernetesClusterRead, error) {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -483,7 +489,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 
 	// Implicitly create the controller manager.
 	if request.Spec.ClusterManagerId == nil {
-		clusterManager, err := clustermanager.NewClient(c.client).CreateImplicit(ctx, organizationID, projectID)
+		clusterManager, err := clustermanager.NewClient(c.client).CreateImplicit(ctx, appclient, organizationID, projectID)
 		if err != nil {
 			return nil, err
 		}
@@ -491,7 +497,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 		request.Spec.ClusterManagerId = ptr.To(clusterManager.Name)
 	}
 
-	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, request)
+	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, appclient, request)
 	if err != nil {
 		return nil, err
 	}
@@ -517,7 +523,7 @@ func (c *Client) Create(ctx context.Context, organizationID, projectID string, r
 	return convert(cluster), nil
 }
 
-// Delete deletes the implicit cluster indentified by the JTW claims.
+// Delete deletes the implicit cluster identified by the JTW claims.
 func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterID string) error {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
@@ -549,7 +555,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 }
 
 // Update implements read/modify/write for the cluster.
-func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterID string, request *openapi.KubernetesClusterWrite) error {
+func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterID string, request *openapi.KubernetesClusterWrite) error {
 	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
 	if err != nil {
 		return err
@@ -564,7 +570,7 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 		return err
 	}
 
-	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, request)
+	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, appclient, request)
 	if err != nil {
 		return err
 	}
@@ -577,10 +583,6 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 		return errors.OAuth2ServerError("failed to merge annotations").WithError(err)
 	}
 
-	if err := c.updateAllocation(ctx, organizationID, projectID, required); err != nil {
-		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
-	}
-
 	// Preserve networking options as if they change it'll be fairly catastrophic.
 	required.Spec.Network = current.Spec.Network
 
@@ -590,6 +592,10 @@ func (c *Client) Update(ctx context.Context, organizationID, projectID, clusterI
 	updated.Labels = required.Labels
 	updated.Annotations = required.Annotations
 	updated.Spec = required.Spec
+
+	if err := c.updateAllocation(ctx, organizationID, projectID, updated); err != nil {
+		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
+	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
 		return errors.OAuth2ServerError("failed to patch cluster").WithError(err)
