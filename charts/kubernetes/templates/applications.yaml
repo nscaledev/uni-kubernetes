@@ -172,6 +172,25 @@ spec:
       value: 'false'
     - name: bpf.lbExternalClusterIP
       value: 'true'
+    interface: 1.0.0
+  - version: 1.17.2
+    repo: https://helm.cilium.io
+    chart: cilium
+    namespace: kube-system
+    parameters:
+    - name: hubble.relay.enabled
+      value: 'true'
+    - name: hubble.ui.enabled
+      value: 'true'
+    - name: operator.setNodeTaints
+      value: 'false'
+    - name: envoy.enabled
+      value: 'false'
+    - name: bpf.lbExternalClusterIP
+      value: 'true'
+    - name: gatewayAPI.enabled
+      value: 'true'
+    interface: 1.0.0
   - version: 1.18.0-pre.0
     repo: https://helm.cilium.io
     chart: cilium
