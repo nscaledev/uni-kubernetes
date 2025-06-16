@@ -202,6 +202,23 @@ spec:
       value: 'false'
     - name: bpf.lbExternalClusterIP
       value: 'true'
+  - version: 1.18.0-pre.3
+    repo: https://helm.cilium.io
+    chart: cilium
+    namespace: kube-system
+    parameters:
+    - name: hubble.relay.enabled
+      value: 'true'
+    - name: hubble.ui.enabled
+      value: 'true'
+    - name: operator.setNodeTaints
+      value: 'false'
+    - name: envoy.enabled
+      value: 'false'
+    - name: bpf.lbExternalClusterIP
+      value: 'true'
+    - name: gatewayAPI.enabled
+      value: 'true'
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
@@ -483,3 +500,23 @@ spec:
   - version: v0.1.0
     repo: https://nscaledev.github.io/uni-helm-cluster-api
     chart: cluster-api-cluster-autoscaler-openstack
+---
+apiVersion: unikorn-cloud.org/v1alpha1
+kind: HelmApplication
+metadata:
+  name: {{ include "resource.id" "gateway-api-crds" }}
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+    unikorn-cloud.org/name: gateway-api-crds
+  annotations:
+    unikorn-cloud.org/description: |-
+      Gateway API CRDs
+spec:
+  icon: []
+  documentation: https://gateway-api.sigs.k8s.io/
+  license: Apache-2.0 License
+  versions:
+  - version: v1.3.0
+    repo: https://github.com/kubernetes-sigs/gateway-api
+    path: config/crd
+    branch: v1.3.0
