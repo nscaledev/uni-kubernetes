@@ -49,6 +49,7 @@ import (
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/clusterautoscaler"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/clusterautoscaleropenstack"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/clusteropenstack"
+	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/gatewayapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/metricsserver"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/nvidiagpuoperator"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackcloudprovider"
@@ -155,6 +156,10 @@ func (a *ApplicationReferenceGetter) clusterAutoscaler(ctx context.Context) (*un
 
 func (a *ApplicationReferenceGetter) clusterAutoscalerOpenstack(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
 	return a.getApplication(ctx, "cluster-autoscaler-openstack")
+}
+
+func (a *ApplicationReferenceGetter) gatewayAPI(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
+	return a.getApplication(ctx, "gateway-api-crds")
 }
 
 // Options allows access to CLI options in the provisioner.
@@ -323,6 +328,7 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 	addonsProvisioner := concurrent.New("cluster add-ons",
 		openstackplugincindercsi.New(apps.openstackPluginCinderCSI, options),
 		metricsserver.New(apps.metricsServer),
+		gatewayapi.New(apps.gatewayAPI),
 		conditional.New("nvidia-gpu-operator",
 			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorNvidia },
 			nvidiagpuoperator.New(apps.nvidiaGPUOperator),
