@@ -54,6 +54,20 @@ func init() {
 	metrics.Registry.MustRegister(durationMetric)
 }
 
+type labelPropagator struct {
+}
+
+func (p labelPropagator) NamespaceMetadata(ctx context.Context, _ unikornv1core.SemanticVersion) (map[string]string, map[string]string, error) {
+	origin := application.FromContext(ctx)
+
+	originLabels, err := origin.ResourceLabels() // this gives us the org, project, kind and name.
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return originLabels, nil, nil
+}
+
 type ProvisionerOptions struct {
 	Domain            string
 	NodeSelectorLabel string
@@ -86,7 +100,8 @@ func (opts *ProvisionerOptions) NodeSelector(vclusterName string) map[string]str
 }
 
 type Provisioner struct {
-	Options ProvisionerOptions
+	labelPropagator // get the implementation of NamespaceMetadata from here
+	Options         ProvisionerOptions
 }
 
 // New returns a new initialized provisioner object.
