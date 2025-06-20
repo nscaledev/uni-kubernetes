@@ -177,6 +177,8 @@ github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65E
 github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/unikorn-cloud/core v1.3.0 h1:K5NuSAspBU2ud6c+bYQ5Tc6+5VMReZsTQmJBZlEbs+4=
 github.com/unikorn-cloud/core v1.3.0/go.mod h1:w+knncdBlLfVg82Ky3BejohUqiXrCUPFnAup1yZYbyM=
+github.com/unikorn-cloud/core v1.3.1-rc1 h1:UCWtHD420KmnyrgRMyNQMhhqqIVLqB+PaFcpsiLnBRE=
+github.com/unikorn-cloud/core v1.3.1-rc1/go.mod h1:w+knncdBlLfVg82Ky3BejohUqiXrCUPFnAup1yZYbyM=
 github.com/unikorn-cloud/identity v1.3.0 h1:3x/Ey70e2UlUyya2JxvcS3G7EJCGKFBbEiJ0cPgpuzI=
 github.com/unikorn-cloud/identity v1.3.0/go.mod h1:laE9JrAzUxMDnqwOINo+h33Ra7ihk5zm070HbvsnS/0=
 github.com/unikorn-cloud/region v1.3.0 h1:AlewC7hZbS162UqdDxF59Oh5jWa6z6G3XsccsbPXHyU=
