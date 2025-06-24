@@ -27,6 +27,7 @@ import (
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
+	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
@@ -76,7 +77,7 @@ func NewClient(client client.Client, identity *identity.Client, region *region.C
 }
 
 // List returns all clusters owned by the implicit control plane.
-func (c *Client) List(ctx context.Context, organizationID string) (openapi.VirtualKubernetesClusters, error) {
+func (c *Client) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDVirtualclustersParams) (openapi.VirtualKubernetesClusters, error) {
 	result := &unikornv1.VirtualKubernetesClusterList{}
 
 	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
@@ -94,6 +95,15 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Virtu
 	if err := c.client.List(ctx, result, options); err != nil {
 		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
 	}
+
+	tagSelector, err := coreutil.DecodeTagSelectorParam(params.Tag)
+	if err != nil {
+		return nil, err
+	}
+
+	result.Items = slices.DeleteFunc(result.Items, func(resource unikornv1.VirtualKubernetesCluster) bool {
+		return !resource.Spec.Tags.ContainsAll(tagSelector)
+	})
 
 	slices.SortStableFunc(result.Items, unikornv1.CompareVirtualKubernetesCluster)
 

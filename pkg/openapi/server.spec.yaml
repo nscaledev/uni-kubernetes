@@ -179,6 +179,7 @@ paths:
     description: Cluster services.
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
+    - $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/parameters/tagSelectorParameter'
     get:
       description: |-
         List all clusters within the organization.
@@ -294,6 +295,7 @@ paths:
     description: Virtual cluster services.
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
+    - $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/parameters/tagSelectorParameter'
     get:
       description: |-
         List all virtual clusters within the organization.

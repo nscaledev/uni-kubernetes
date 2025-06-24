@@ -319,10 +319,24 @@ type CreateKubernetesClusterRequest = KubernetesClusterWrite
 // CreateVirtualKubernetesClusterRequest Virtual Kubernetes cluster create or update.
 type CreateVirtualKubernetesClusterRequest = VirtualKubernetesClusterWrite
 
+// GetApiV1OrganizationsOrganizationIDClustersParams defines parameters for GetApiV1OrganizationsOrganizationIDClusters.
+type GetApiV1OrganizationsOrganizationIDClustersParams struct {
+	// Tag A set of tags to match against resources in the form "name=value",
+	// thus when encoded you get "?tag=foo%3Dcat&bar%3Ddog".
+	Tag *externalRef0.TagSelectorParameter `form:"tag,omitempty" json:"tag,omitempty"`
+}
+
 // GetApiV1OrganizationsOrganizationIDRegionsParams defines parameters for GetApiV1OrganizationsOrganizationIDRegions.
 type GetApiV1OrganizationsOrganizationIDRegionsParams struct {
 	// RegionType The type of region we are asking for.
 	RegionType RegionTypeParameter `form:"regionType" json:"regionType"`
+}
+
+// GetApiV1OrganizationsOrganizationIDVirtualclustersParams defines parameters for GetApiV1OrganizationsOrganizationIDVirtualclusters.
+type GetApiV1OrganizationsOrganizationIDVirtualclustersParams struct {
+	// Tag A set of tags to match against resources in the form "name=value",
+	// thus when encoded you get "?tag=foo%3Dcat&bar%3Ddog".
+	Tag *externalRef0.TagSelectorParameter `form:"tag,omitempty" json:"tag,omitempty"`
 }
 
 // PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustermanagersJSONRequestBody defines body for PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustermanagers for application/json ContentType.
