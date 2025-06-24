@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/pflag"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
@@ -80,21 +81,30 @@ func newApplicationReferenceGetter(cluster *unikornv1.KubernetesCluster) *Applic
 	}
 }
 
-func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name string) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
+func (a *ApplicationReferenceGetter) getBundle(ctx context.Context) (*unikornv1.KubernetesClusterApplicationBundle, error) {
 	namespace, err := coreclient.NamespaceFromContext(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// TODO: we could cache this, it's from a cache anyway, so quite cheap...
 	cli, err := coreclient.ProvisionerClientFromContext(ctx)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	appclient := applicationbundle.NewClient(cli, namespace)
 
 	bundle, err := appclient.GetKubernetesCluster(ctx, a.cluster.Spec.ApplicationBundle)
+	if err != nil {
+		return nil, err
+	}
+
+	return bundle, nil
+}
+
+func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name string) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
+	bundle, err := a.getBundle(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -104,9 +114,19 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
+	namespace, err := coreclient.NamespaceFromContext(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	appkey := client.ObjectKey{
 		Namespace: namespace,
 		Name:      *reference.Name,
+	}
+
+	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	application := &unikornv1core.HelmApplication{}
@@ -285,8 +305,14 @@ func (p *Provisioner) getProvisionerOptions(options *kubernetesprovisioners.Clus
 	return provisionerOptions, nil
 }
 
+//nolint:cyclop
 func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetesprovisioners.ClusterOpenstackOptions, provision bool) (provisioners.Provisioner, error) {
 	apps := newApplicationReferenceGetter(&p.cluster)
+
+	bundle, err := apps.getBundle(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	provisionerOptions, err := p.getProvisionerOptions(options)
 	if err != nil {
@@ -325,10 +351,9 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 		),
 	)
 
-	addonsProvisioner := concurrent.New("cluster add-ons",
+	addOnsApplications := []provisioners.Provisioner{
 		openstackplugincindercsi.New(apps.openstackPluginCinderCSI, options),
 		metricsserver.New(apps.metricsServer),
-		gatewayapi.New(apps.gatewayAPI),
 		conditional.New("nvidia-gpu-operator",
 			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorNvidia },
 			nvidiagpuoperator.New(apps.nvidiaGPUOperator),
@@ -341,7 +366,14 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorAMD },
 			amdgpuoperator.New(apps.amdGPUOperator),
 		),
-	)
+	}
+
+	// TODO: remove this conditional when smaller versions are all retired.
+	if bundle.Spec.Version.Version.Compare(semver.MustParse("v1.3.0")) >= 0 {
+		addOnsApplications = append(addOnsApplications, gatewayapi.New(apps.gatewayAPI))
+	}
+
+	addonsProvisioner := concurrent.New("cluster add-ons", addOnsApplications...)
 
 	// Create the cluster and the boostrap components in parallel, the cluster will
 	// come up but never reach healthy until the CNI and cloud controller manager
