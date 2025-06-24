@@ -19,7 +19,7 @@ type ServerInterface interface {
 	GetApiV1OrganizationsOrganizationIDClustermanagers(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter)
 
 	// (GET /api/v1/organizations/{organizationID}/clusters)
-	GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter)
+	GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDClustersParams)
 
 	// (POST /api/v1/organizations/{organizationID}/projects/{projectID}/clustermanagers)
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustermanagers(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter)
@@ -64,7 +64,7 @@ type ServerInterface interface {
 	GetApiV1OrganizationsOrganizationIDRegionsRegionIDImages(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, regionID RegionIDParameter)
 
 	// (GET /api/v1/organizations/{organizationID}/virtualclusters)
-	GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter)
+	GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDVirtualclustersParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -77,7 +77,7 @@ func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDClustermanagers(w http
 }
 
 // (GET /api/v1/organizations/{organizationID}/clusters)
-func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter) {
+func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDClustersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -152,7 +152,7 @@ func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDRegionsRegionIDImages(
 }
 
 // (GET /api/v1/organizations/{organizationID}/virtualclusters)
-func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter) {
+func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDVirtualclustersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -216,8 +216,19 @@ func (siw *ServerInterfaceWrapper) GetApiV1OrganizationsOrganizationIDClusters(w
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetApiV1OrganizationsOrganizationIDClustersParams
+
+	// ------------- Optional query parameter "tag" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tag", r.URL.Query(), &params.Tag)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetApiV1OrganizationsOrganizationIDClusters(w, r, organizationID)
+		siw.Handler.GetApiV1OrganizationsOrganizationIDClusters(w, r, organizationID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -888,8 +899,19 @@ func (siw *ServerInterfaceWrapper) GetApiV1OrganizationsOrganizationIDVirtualclu
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetApiV1OrganizationsOrganizationIDVirtualclustersParams
+
+	// ------------- Optional query parameter "tag" -------------
+
+	err = runtime.BindQueryParameter("form", true, false, "tag", r.URL.Query(), &params.Tag)
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag", Err: err})
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetApiV1OrganizationsOrganizationIDVirtualclusters(w, r, organizationID)
+		siw.Handler.GetApiV1OrganizationsOrganizationIDVirtualclusters(w, r, organizationID, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
