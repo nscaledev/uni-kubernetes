@@ -197,10 +197,7 @@ func (r *regionRemote) ID() *cd.ResourceIdentifier {
 
 	var labels []cd.ResourceIdentifierLabel
 
-	// Note that this does not use the full set of labels; it's the region cluster we
-	// will be installing to, not the virtual cluster, and we want it to calculate the
-	// same Secret for the same region.
-	for _, label := range []string{coreconstants.OrganizationLabel} {
+	for _, label := range coreconstants.LabelPriorities() {
 		if value, ok := resourceLabels[label]; ok {
 			labels = append(labels, cd.ResourceIdentifierLabel{
 				Name:  label,
@@ -210,7 +207,7 @@ func (r *regionRemote) ID() *cd.ResourceIdentifier {
 	}
 
 	return &cd.ResourceIdentifier{
-		Name:   "region-" + r.cluster.Spec.RegionID,
+		Name:   "virtualcluster",
 		Labels: labels,
 	}
 }
@@ -240,8 +237,6 @@ func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner
 		cluster:    &p.cluster,
 		kubeconfig: kubeconfig,
 	}
-	labels, _ := p.cluster.ResourceLabels()
-	orgID := labels[coreconstants.OrganizationLabel]
 
 	remoteCluster := remotecluster.New(regionGenerator, true)
 
@@ -251,8 +246,12 @@ func (p *Provisioner) getProvisioner(kubeconfig []byte) provisioners.Provisioner
 	provisioner := remoteCluster.ProvisionOn(
 		// The namespace gets a prefix so it's easier to distinguish for automation and eyeballs.
 		virtualcluster.New(apps.vCluster, p.options.provisionerOptions).InNamespace(RemoteNamespace(&p.cluster)),
-		// The remote gets a prefix so it doesn't collide with other org's virtual cluster remotes.
-		remotecluster.WithPrefix("region-org-"+orgID),
+		// The remote cluster is static in this case, and is shared by multiple different
+		// virtual clusters.  Each virtual cluster will assume management of the secret so
+		// the name MUST be unique across the whole platform, otherwise deleting one vcluster
+		// will result in the CD layer losing contact with the all the others.  If you are
+		// deleting multiple at the same time, this will result in resource leaks.
+		remotecluster.WithPrefix("virtualcluster-"+p.cluster.Name),
 	)
 
 	return provisioner
