@@ -30,6 +30,8 @@ import (
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,8 +39,8 @@ var (
 	ErrResourceDependency = errors.New("resource dependency error")
 )
 
-// Client creates a new authenticated client and context for use against the region service.
-func Client(ctx context.Context, cli client.Client, httpOptions *coreclient.HTTPClientOptions, identityOptions *identityclient.Options, regionOptions *regionclient.Options, traceName string) (context.Context, regionapi.ClientWithResponsesInterface, error) {
+// ControllerClient creates a new authenticated client and context for use against the region service.
+func ControllerClient(ctx context.Context, cli client.Client, httpOptions *coreclient.HTTPClientOptions, identityOptions *identityclient.Options, regionOptions *regionclient.Options, traceName string, resource metav1.Object) (context.Context, regionapi.ClientWithResponsesInterface, error) {
 	tokenIssuer := identityclient.NewTokenIssuer(cli, identityOptions, httpOptions, constants.Application, constants.Version)
 
 	token, err := tokenIssuer.Issue(ctx, traceName)
@@ -48,7 +50,7 @@ func Client(ctx context.Context, cli client.Client, httpOptions *coreclient.HTTP
 
 	getter := regionclient.New(cli, regionOptions, httpOptions)
 
-	client, err := getter.Client(ctx, token)
+	client, err := getter.ControllerClient(ctx, token, resource)
 	if err != nil {
 		return nil, nil, err
 	}

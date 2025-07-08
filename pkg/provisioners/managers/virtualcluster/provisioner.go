@@ -169,7 +169,7 @@ func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (co
 		return nil, nil, err
 	}
 
-	return regionutil.Client(ctx, cli, &p.options.clientOptions, p.options.identityOptions, p.options.regionOptions, traceName)
+	return regionutil.ControllerClient(ctx, cli, &p.options.clientOptions, p.options.identityOptions, p.options.regionOptions, traceName, &p.cluster)
 }
 
 // getKubeconfig reads the kubeconfig from the Kubernetes region.

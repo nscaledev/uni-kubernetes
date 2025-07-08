@@ -26,7 +26,9 @@ import (
 	"github.com/spf13/pflag"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
+	constants "github.com/unikorn-cloud/core/pkg/constants"
 	"github.com/unikorn-cloud/core/pkg/provisioners/application"
+	"github.com/unikorn-cloud/identity/pkg/principal"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -63,6 +65,20 @@ func (p labelPropagator) NamespaceMetadata(ctx context.Context, _ unikornv1core.
 	originLabels, err := origin.ResourceLabels() // this gives us the org, project, kind and name.
 	if err != nil {
 		return nil, nil, err
+	}
+
+	// The identity principal gives us the true org and project for billing.
+	principal, err := principal.FromResource(origin)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if principal.OrganizationID != "" {
+		originLabels[constants.OrganizationPrincipalLabel] = principal.OrganizationID
+	}
+
+	if principal.ProjectID != "" {
+		originLabels[constants.ProjectPrincipalLabel] = principal.ProjectID
 	}
 
 	return originLabels, nil, nil

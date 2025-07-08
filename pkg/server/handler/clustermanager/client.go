@@ -25,7 +25,7 @@ import (
 	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
-	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
+	identitycommon "github.com/unikorn-cloud/identity/pkg/handler/common"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/common"
@@ -198,18 +198,17 @@ func (c *Client) generate(ctx context.Context, appclient appBundleLister, namesp
 		return nil, err
 	}
 
-	info, err := authorization.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	out := &unikornv1.ClusterManager{
-		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, namespace.Name, info.Userinfo.Sub).WithOrganization(organizationID).WithProject(projectID).Get(),
+		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, namespace.Name).WithOrganization(organizationID).WithProject(projectID).Get(),
 		Spec: unikornv1.ClusterManagerSpec{
 			Tags:                         conversion.GenerateTagList(request.Metadata.Tags),
 			ApplicationBundle:            applicationBundle.Name,
 			ApplicationBundleAutoUpgrade: &unikornv1.ApplicationBundleAutoUpgradeSpec{},
 		},
+	}
+
+	if err := identitycommon.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
+		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
 	}
 
 	return out, nil
@@ -302,7 +301,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 		return err
 	}
 
-	if err := conversion.UpdateObjectMetadata(required, current, nil, nil); err != nil {
+	if err := conversion.UpdateObjectMetadata(required, current, identitycommon.IdentityMetadataMutator); err != nil {
 		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
 	}
 
