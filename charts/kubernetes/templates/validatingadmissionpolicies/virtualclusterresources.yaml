@@ -1,7 +1,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
-  name: cluster-resources.kubernetes.unikorn-cloud.org
+  name: virtualcluster-resources.kubernetes.unikorn-cloud.org
 spec:
   failurePolicy: Fail
   matchConstraints:
@@ -11,7 +11,7 @@ spec:
       apiVersions:
       - '*'
       resources:
-      - kubernetesclusters
+      - virtualkubernetesclusters
       operations:
       - CREATE
       - UPDATE
@@ -26,16 +26,14 @@ spec:
     message: Resource must contain a unikorn-cloud.org/project label
   - expression: "oldObject == null || oldObject.metadata.?labels[?'principal.unikorn-cloud.org/project'].orValue('') ==  object.metadata.?labels[?'principal.unikorn-cloud.org/project'].orValue('')"
     message: Resource principal/unikorn-cloud.org/project label is immutable
-  - expression: "object.metadata.?annotations[?'unikorn-cloud.org/identity-id'].orValue('') != ''"
-    message: Resource must contain a unikorn-cloud.org/identity-id annotation
   - expression: "object.metadata.?annotations[?'unikorn-cloud.org/allocation-id'].orValue('') != ''"
     message: Resource must contain a unikorn-cloud.org/allocation-id annotation
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicyBinding
 metadata:
-  name: cluster-resources.kubernetes.unikorn-cloud.org
+  name: virtualcluster-resources.kubernetes.unikorn-cloud.org
 spec:
-  policyName: cluster-resources.kubernetes.unikorn-cloud.org
+  policyName: virtualcluster-resources.kubernetes.unikorn-cloud.org
   validationActions:
   - Deny

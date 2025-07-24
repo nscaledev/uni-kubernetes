@@ -1,5 +1,5 @@
 /*
-Copyright 2024-2025 the Unikorn Authors.
+Copyright 2025 the Unikorn Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -20,12 +20,11 @@ import (
 	"context"
 	"net/http"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
-
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
-	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
+	baseclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,69 +39,29 @@ func NewOptions() *Options {
 // Client wraps up the raw OpenAPI client with things to make it useable e.g.
 // authorization and TLS.
 type Client struct {
-	// client is a Kubenetes client.
-	client client.Client
-	// options allows setting of option from the CLI
-	options *Options
-	// clientOptions may be specified to inject client certificates etc.
-	clientOptions *coreclient.HTTPClientOptions
+	base *baseclient.BaseClient
 }
 
 // New creates a new client.
 func New(client client.Client, options *Options, clientOptions *coreclient.HTTPClientOptions) *Client {
 	return &Client{
-		client:        client,
-		options:       options,
-		clientOptions: clientOptions,
+		base: baseclient.NewBaseClient(client, options, clientOptions),
 	}
 }
 
 // HTTPClient returns a new http client that will transparently do oauth2 header
 // injection and refresh token updates.
 func (c *Client) HTTPClient(ctx context.Context) (*http.Client, error) {
-	// Handle non-system CA certificates for the OIDC discovery protocol
-	// and oauth2 token refresh. This will return nil if none is specified
-	// and default to the system roots.
-	tlsClientConfig, err := coreclient.TLSClientConfig(ctx, c.client, c.options, c.clientOptions)
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: tlsClientConfig,
-		},
-	}
-
-	return client, nil
+	return c.base.HTTPClient(ctx)
 }
 
-type AccessTokenGetter interface {
-	Get() string
+// APIClient returns a new OpenAPI client that can be used to access the API from another API.
+func (c *Client) APIClient(ctx context.Context, accessToken baseclient.AccessTokenGetter) (*openapi.ClientWithResponses, error) {
+	return baseclient.APIClient(ctx, c.base, openapi.NewBuilder(), accessToken)
 }
 
-// accessTokenInjector implements OAuth2 bearer token authorization.
-func accessTokenInjector(accessToken AccessTokenGetter) func(context.Context, *http.Request) error {
-	return func(ctx context.Context, req *http.Request) error {
-		req.Header.Set("Authorization", "bearer "+accessToken.Get())
-		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(req.Header))
-		authorization.InjectClientCert(ctx, req.Header)
-
-		return nil
-	}
-}
-
-// Client returns a new OpenAPI client that can be used to access the API.
-func (c *Client) Client(ctx context.Context, accessToken AccessTokenGetter) (*openapi.ClientWithResponses, error) {
-	httpClient, err := c.HTTPClient(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := openapi.NewClientWithResponses(c.options.Host(), openapi.WithHTTPClient(httpClient), openapi.WithRequestEditorFn(accessTokenInjector(accessToken)))
-	if err != nil {
-		return nil, err
-	}
-
-	return client, nil
+// ControllerClient returns a new OpenAPI client that can be used to access the API from another
+// controller.  It requires a resource that stores the identity principal information.
+func (c *Client) ControllerClient(ctx context.Context, accessToken baseclient.AccessTokenGetter, resource metav1.Object) (*openapi.ClientWithResponses, error) {
+	return baseclient.ControllerClient(ctx, c.base, openapi.NewBuilder(), accessToken, resource)
 }

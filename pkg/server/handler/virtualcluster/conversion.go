@@ -23,7 +23,7 @@ import (
 
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
-	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
+	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 
@@ -185,13 +185,8 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, req
 		return nil, err
 	}
 
-	info, err := authorization.FromContext(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	cluster := &unikornv1.VirtualKubernetesCluster{
-		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace, info.Userinfo.Sub).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
+	out := &unikornv1.VirtualKubernetesCluster{
+		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
 		Spec: unikornv1.VirtualKubernetesClusterSpec{
 			Tags:                         conversion.GenerateTagList(request.Metadata.Tags),
 			RegionID:                     request.Spec.RegionId,
@@ -201,7 +196,11 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, req
 		},
 	}
 
-	g.preserveDefaultedFields(cluster)
+	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
+		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+	}
 
-	return cluster, nil
+	g.preserveDefaultedFields(out)
+
+	return out, nil
 }

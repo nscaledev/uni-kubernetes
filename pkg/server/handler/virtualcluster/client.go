@@ -28,7 +28,9 @@ import (
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
+	identitycommon "github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
+	"github.com/unikorn-cloud/identity/pkg/principal"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
@@ -41,6 +43,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/clientcmd"
@@ -254,8 +257,13 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 	return request, nil
 }
 
-func (c *Client) createAllocation(ctx context.Context, organizationID, projectID string, resource *unikornv1.VirtualKubernetesCluster) (*identityapi.AllocationRead, error) {
-	allocations, err := c.generateAllocations(ctx, organizationID, resource)
+func (c *Client) createAllocation(ctx context.Context, resource *unikornv1.VirtualKubernetesCluster) (*identityapi.AllocationRead, error) {
+	principal, err := principal.GetPrincipal(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	allocations, err := c.generateAllocations(ctx, principal.OrganizationID, resource)
 	if err != nil {
 		return nil, err
 	}
@@ -265,7 +273,7 @@ func (c *Client) createAllocation(ctx context.Context, organizationID, projectID
 		return nil, err
 	}
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, organizationID, projectID, *allocations)
+	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, principal.OrganizationID, principal.ProjectID, *allocations)
 	if err != nil {
 		return nil, err
 	}
@@ -277,8 +285,13 @@ func (c *Client) createAllocation(ctx context.Context, organizationID, projectID
 	return resp.JSON201, nil
 }
 
-func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID string, resource *unikornv1.VirtualKubernetesCluster) error {
-	allocations, err := c.generateAllocations(ctx, organizationID, resource)
+func (c *Client) updateAllocation(ctx context.Context, resource *unikornv1.VirtualKubernetesCluster) error {
+	principal, err := principal.FromResource(resource)
+	if err != nil {
+		return err
+	}
+
+	allocations, err := c.generateAllocations(ctx, principal.OrganizationID, resource)
 	if err != nil {
 		return err
 	}
@@ -288,7 +301,7 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 		return err
 	}
 
-	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
+	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principal.OrganizationID, principal.ProjectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
 	if err != nil {
 		return err
 	}
@@ -300,13 +313,18 @@ func (c *Client) updateAllocation(ctx context.Context, organizationID, projectID
 	return nil
 }
 
-func (c *Client) deleteAllocation(ctx context.Context, organizationID, projectID, allocationID string) error {
+func (c *Client) deleteAllocation(ctx context.Context, resource *unikornv1.VirtualKubernetesCluster) error {
+	principal, err := principal.FromResource(resource)
+	if err != nil {
+		return err
+	}
+
 	client, err := c.identity.Client(ctx)
 	if err != nil {
 		return err
 	}
 
-	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, organizationID, projectID, allocationID)
+	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principal.OrganizationID, principal.ProjectID, resource.Annotations[constants.AllocationAnnotation])
 	if err != nil {
 		return err
 	}
@@ -327,21 +345,21 @@ func (c *Client) applyCloudSpecificConfiguration(allocation *identityapi.Allocat
 	cluster.Annotations[constants.AllocationAnnotation] = allocation.Metadata.Id
 }
 
-func preserveAnnotations(requested, current *unikornv1.VirtualKubernetesCluster) error {
-	allocation, ok := current.Annotations[constants.AllocationAnnotation]
-	if !ok {
-		return fmt.Errorf("%w: allocation annotation missing", ErrConsistency)
+func metadataMutator(required, current metav1.Object) error {
+	req := required.GetAnnotations()
+	if req == nil {
+		req = map[string]string{}
 	}
 
-	if requested.Annotations == nil {
-		requested.Annotations = map[string]string{}
+	cur := current.GetAnnotations()
+
+	// Preserve the allocation.
+	// NOTE: these are guarded by a validating admission policy so should exist.
+	if v, ok := cur[constants.AllocationAnnotation]; ok {
+		req[constants.AllocationAnnotation] = v
 	}
 
-	requested.Annotations[constants.AllocationAnnotation] = allocation
-
-	if network, ok := current.Annotations[constants.PhysicalNetworkAnnotation]; ok {
-		requested.Annotations[constants.PhysicalNetworkAnnotation] = network
-	}
+	required.SetAnnotations(req)
 
 	return nil
 }
@@ -362,7 +380,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 		return nil, err
 	}
 
-	allocation, err := c.createAllocation(ctx, organizationID, projectID, cluster)
+	allocation, err := c.createAllocation(ctx, cluster)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("failed to create quota allocation").WithError(err)
 	}
@@ -400,7 +418,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 		return errors.OAuth2ServerError("failed to delete cluster").WithError(err)
 	}
 
-	if err := c.deleteAllocation(ctx, organizationID, projectID, cluster.Annotations[constants.AllocationAnnotation]); err != nil {
+	if err := c.deleteAllocation(ctx, cluster); err != nil {
 		return errors.OAuth2ServerError("failed to delete quota allocation").WithError(err)
 	}
 
@@ -428,12 +446,8 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 		return err
 	}
 
-	if err := conversion.UpdateObjectMetadata(required, current, nil, nil); err != nil {
+	if err := conversion.UpdateObjectMetadata(required, current, identitycommon.IdentityMetadataMutator, metadataMutator); err != nil {
 		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
-	}
-
-	if err := preserveAnnotations(required, current); err != nil {
-		return errors.OAuth2ServerError("failed to merge annotations").WithError(err)
 	}
 
 	// Experience has taught me that modifying caches by accident is a bad thing
@@ -443,7 +457,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	updated.Annotations = required.Annotations
 	updated.Spec = required.Spec
 
-	if err := c.updateAllocation(ctx, organizationID, projectID, updated); err != nil {
+	if err := c.updateAllocation(ctx, updated); err != nil {
 		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
 	}
 
