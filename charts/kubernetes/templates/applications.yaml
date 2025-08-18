@@ -512,7 +512,7 @@ metadata:
     unikorn-cloud.org/description: |-
       Gateway API CRDs
 spec:
-  icon: []
+  icon: todo
   documentation: https://gateway-api.sigs.k8s.io/
   license: Apache-2.0 License
   versions:
