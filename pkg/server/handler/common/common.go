@@ -57,8 +57,13 @@ func (c *Client) ProjectNamespace(ctx context.Context, organization, project str
 		return nil, err
 	}
 
+	kindRequirement, err := labels.NewRequirement(constants.KindLabel, selection.Equals, []string{constants.KindLabelValueProject})
+	if err != nil {
+		return nil, err
+	}
+
 	selector := labels.NewSelector()
-	selector = selector.Add(*organizationRequirement, *projectRequirement)
+	selector = selector.Add(*organizationRequirement, *projectRequirement, *kindRequirement)
 
 	options := &client.ListOptions{
 		LabelSelector: selector,
