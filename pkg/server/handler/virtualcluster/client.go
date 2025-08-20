@@ -28,14 +28,13 @@ import (
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
-	identitycommon "github.com/unikorn-cloud/identity/pkg/handler/common"
+	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	"github.com/unikorn-cloud/identity/pkg/principal"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
 	provisioner "github.com/unikorn-cloud/kubernetes/pkg/provisioners/managers/virtualcluster"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/common"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/identity"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionutil "github.com/unikorn-cloud/kubernetes/pkg/util/region"
@@ -165,7 +164,7 @@ func (c *Client) regionKubernetesClient(ctx context.Context, organizationID stri
 
 // GetKubeconfig returns the kubernetes configuation associated with a cluster.
 func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, clusterID string) ([]byte, error) {
-	project, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	project, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +369,7 @@ type appBundleLister interface {
 
 // Create creates the implicit cluster identified by the JTW claims.
 func (c *Client) Create(ctx context.Context, appclient appBundleLister, organizationID, projectID string, request *openapi.VirtualKubernetesClusterWrite) (*openapi.VirtualKubernetesClusterRead, error) {
-	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -396,7 +395,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 
 // Delete deletes the implicit cluster identified by the JTW claims.
 func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterID string) error {
-	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err
 	}
@@ -427,7 +426,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 
 // Update implements read/modify/write for the cluster.
 func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterID string, request *openapi.VirtualKubernetesClusterWrite) error {
-	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err
 	}
@@ -446,7 +445,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 		return err
 	}
 
-	if err := conversion.UpdateObjectMetadata(required, current, identitycommon.IdentityMetadataMutator, metadataMutator); err != nil {
+	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator, metadataMutator); err != nil {
 		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
 	}
 

@@ -25,10 +25,9 @@ import (
 	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
-	identitycommon "github.com/unikorn-cloud/identity/pkg/handler/common"
+	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/common"
 
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -62,7 +61,7 @@ type appBundleLister interface {
 func (c *Client) CreateImplicit(ctx context.Context, appclient appBundleLister, organizationID, projectID string) (*unikornv1.ClusterManager, error) {
 	log := log.FromContext(ctx)
 
-	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +206,7 @@ func (c *Client) generate(ctx context.Context, appclient appBundleLister, namesp
 		},
 	}
 
-	if err := identitycommon.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
+	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
 		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
 	}
 
@@ -216,7 +215,7 @@ func (c *Client) generate(ctx context.Context, appclient appBundleLister, namesp
 
 // Create creates a control plane.
 func (c *Client) create(ctx context.Context, appclient appBundleLister, organizationID, projectID string, request *openapi.ClusterManagerWrite) (*unikornv1.ClusterManager, error) {
-	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +252,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 
 // Delete deletes the control plane.
 func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterManagerID string) error {
-	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err
 	}
@@ -282,7 +281,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterM
 
 // Update implements read/modify/write for the control plane.
 func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterManagerID string, request *openapi.ClusterManagerWrite) error {
-	namespace, err := common.New(c.client).ProjectNamespace(ctx, organizationID, projectID)
+	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err
 	}
@@ -301,7 +300,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 		return err
 	}
 
-	if err := conversion.UpdateObjectMetadata(required, current, identitycommon.IdentityMetadataMutator); err != nil {
+	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator); err != nil {
 		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
 	}
 
