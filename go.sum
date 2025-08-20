@@ -179,8 +179,8 @@ github.com/ugorji/go/codec v1.2.12 h1:9LC83zGrHhuUA9l16C9AHXAqEV/2wBQ4nkvumAE65E
 github.com/ugorji/go/codec v1.2.12/go.mod h1:UNopzCgEMSXjBc6AOMqYvWC1ktqTAfzJZUZgYf6w6lg=
 github.com/unikorn-cloud/core v1.4.0 h1:kDuT92+gVEzJjlx9AH+G26DA/5myyDGibueR36o89WQ=
 github.com/unikorn-cloud/core v1.4.0/go.mod h1:fMkv/mXFw7N6V+SV1Pd9WSs6HqP02IdM2iECNxewZ9Q=
-github.com/unikorn-cloud/identity v1.4.0 h1:i8Gu7vFUpT0RMmq48MWnYzvPQBbzRBp9V/Zqkj3BveQ=
-github.com/unikorn-cloud/identity v1.4.0/go.mod h1:JUCcoFjrUnz7y/bT5YLabw4M+i7pz7JiAaxNZLzlRwI=
+github.com/unikorn-cloud/identity v1.5.0-rc1 h1:4p6XRtJ2zehzoXBS2bA4Vdjfq5F1BVRRMCErtmSNT1k=
+github.com/unikorn-cloud/identity v1.5.0-rc1/go.mod h1:JUCcoFjrUnz7y/bT5YLabw4M+i7pz7JiAaxNZLzlRwI=
 github.com/unikorn-cloud/region v1.4.0 h1:ASILpSKm4Ewad81v2DNIWKVt+sMNa0ny/rws2Or8k8I=
 github.com/unikorn-cloud/region v1.4.0/go.mod h1:GYVaQM1K3SUlw06cMr1HJELpdmlvpWbNj1gMW95B7tM=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
