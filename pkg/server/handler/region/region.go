@@ -64,6 +64,8 @@ type Client struct {
 	imageCache    *cache.LRUExpireCache[string, []regionapi.Image]
 }
 
+var _ ClientInterface = &Client{}
+
 // New returns a new client.
 func New(clientGetter ClientGetterFunc) *Client {
 	return &Client{
