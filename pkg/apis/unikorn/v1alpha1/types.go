@@ -196,15 +196,11 @@ type KubernetesClusterFeaturesSpec struct {
 	GPUOperator bool `json:"gpuOperator,omitempty"`
 }
 
-type KubernetesClusterWorkloadPoolsPoolSpec struct {
-	KubernetesWorkloadPoolSpec `json:",inline"`
-}
-
 type KubernetesClusterWorkloadPoolsSpec struct {
 	// Pools contains an inline set of pools.  This field will be ignored
 	// when Selector is set.  Inline pools are expected to be used for UI
 	// generated clusters.
-	Pools []KubernetesClusterWorkloadPoolsPoolSpec `json:"pools,omitempty"`
+	Pools []KubernetesWorkloadPoolSpec `json:"pools,omitempty"`
 }
 
 // KubernetesClusterStatus defines the observed state of the Kubernetes cluster.

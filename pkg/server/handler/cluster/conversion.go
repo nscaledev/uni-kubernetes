@@ -58,7 +58,7 @@ type generator struct {
 	// options allows access to resource defaults.
 	options *Options
 	// region is a client to access regions.
-	region *region.Client
+	region region.ClientInterface
 	// namespace the resource is provisioned in.
 	namespace string
 	// organizationID is the unique organization identifier.
@@ -72,7 +72,7 @@ type generator struct {
 	existing *unikornv1.KubernetesCluster
 }
 
-func newGenerator(client client.Client, options *Options, region *region.Client, namespace, organizationID, projectID string) *generator {
+func newGenerator(client client.Client, options *Options, region region.ClientInterface, namespace, organizationID, projectID string) *generator {
 	return &generator{
 		client:         client,
 		options:        options,
@@ -106,7 +106,7 @@ func convertMachine(in *unikornv1core.MachineGeneric) *openapi.MachinePool {
 }
 
 // convertWorkloadPool converts from a custom resource into the API definition.
-func convertWorkloadPool(in *unikornv1.KubernetesClusterWorkloadPoolsPoolSpec) openapi.KubernetesClusterWorkloadPool {
+func convertWorkloadPool(in *unikornv1.KubernetesWorkloadPoolSpec) openapi.KubernetesClusterWorkloadPool {
 	workloadPool := openapi.KubernetesClusterWorkloadPool{
 		Name:    in.Name,
 		Machine: *convertMachine(&in.MachineGeneric),
@@ -277,6 +277,10 @@ func (g *generator) defaultImage(ctx context.Context, request *openapi.Kubernete
 
 	// Only get the version asked for.
 	images = slices.DeleteFunc(images, func(x regionapi.Image) bool {
+		if x.Spec.SoftwareVersions == nil {
+			return true
+		}
+
 		return (*x.Spec.SoftwareVersions)["kubernetes"] != request.Spec.Version
 	})
 
@@ -395,13 +399,9 @@ func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi
 		FlavorID: *m.FlavorId,
 	}
 
-	if imageID == nil {
-		temp, err := g.imageID(ctx, request, imageID)
-		if err != nil {
-			return nil, err
-		}
-
-		imageID = temp
+	imageID, err := g.imageID(ctx, request, imageID)
+	if err != nil {
+		return nil, err
 	}
 
 	machine.ImageID = *imageID
@@ -474,11 +474,9 @@ func (g *generator) generateWorkloadPools(ctx context.Context, request *openapi.
 			return nil, err
 		}
 
-		workloadPool := unikornv1.KubernetesClusterWorkloadPoolsPoolSpec{
-			KubernetesWorkloadPoolSpec: unikornv1.KubernetesWorkloadPoolSpec{
-				Name:           pool.Name,
-				MachineGeneric: *machine,
-			},
+		workloadPool := unikornv1.KubernetesWorkloadPoolSpec{
+			Name:           pool.Name,
+			MachineGeneric: *machine,
 		}
 
 		if pool.Labels != nil {
@@ -565,7 +563,7 @@ func generateAutoUpgrade(request *openapi.KubernetesClusterAutoUpgrade) *unikorn
 // the end user, there are operation reasons for disabling things, and preventing surprise
 // upgrades when you update a cluster.
 func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster) {
-	if g.existing == nil {
+	if g.existing == nil || g.existing.Spec.Features == nil {
 		return
 	}
 
