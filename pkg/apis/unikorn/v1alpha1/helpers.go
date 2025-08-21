@@ -186,7 +186,7 @@ func (c *KubernetesCluster) GPUOperatorEnabled() bool {
 	return c.Spec.Features != nil && c.Spec.Features.GPUOperator
 }
 
-func (c *KubernetesCluster) GetWorkloadPool(name string) *KubernetesClusterWorkloadPoolsPoolSpec {
+func (c *KubernetesCluster) GetWorkloadPool(name string) *KubernetesWorkloadPoolSpec {
 	for i, pool := range c.Spec.WorkloadPools.Pools {
 		if pool.Name == name {
 			return &c.Spec.WorkloadPools.Pools[i]

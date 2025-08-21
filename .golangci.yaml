@@ -31,13 +31,19 @@ linters:
       - std-error-handling
     rules:
       - path: (.+)\.go$
-        text: if-return
+        linters:
+        - if-return
       - path: (.+)\.go$
         text: unused-parameter
+      - path: (.+)export_test.go
+        linters:
+        - gochecknoglobals
+        - revive
     paths:
       - third_party$
       - builtin$
       - examples$
+
 formatters:
   enable:
     - gci

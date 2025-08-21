@@ -179,7 +179,7 @@ func (p *Provisioner) generateWorkloadPoolHelmValues(cluster *unikornv1.Kubernet
 
 // generateWorkloadPoolSchedulerHelmValues translates from Kubernetes API scheduling
 // parameters into ones acceptable by Helm.
-func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.KubernetesClusterWorkloadPoolsPoolSpec) (map[string]any, error) {
+func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.KubernetesWorkloadPoolSpec) (map[string]any, error) {
 	// When scaler from zero is enabled, you need to provide CPU and memory hints,
 	// the autoscaler cannot guess the flavor attributes.
 	flavor, err := p.getFlavor(pool.FlavorID)
