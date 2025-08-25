@@ -48,6 +48,7 @@ func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersio
 	// Scale to zero support.
 	operatorValues := map[string]any{
 		"nodeSelector": util.ControlPlaneNodeSelector(),
+		"tolerations":  append(util.ControlPlaneInitTolerations(), util.ControlPlaneTolerations()...),
 	}
 
 	// If the cluster CP has one node, then this will fail to deploy
