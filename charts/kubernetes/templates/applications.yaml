@@ -111,6 +111,18 @@ spec:
       value: 4Gi
     - name: vcluster.controlPlane.hostPathMapper.enabled
       value: 'true'
+  - version: 0.2.0
+    repo: https://github.com/nscaledev/uni-helm-virtualcluster
+    branch: v0.2.0
+    path: charts/virtualcluster
+    createNamespace: true
+    parameters:
+    - name: vcluster.controlPlane.statefulSet.resources.limits.memory
+      value: 4Gi
+    - name: vcluster.controlPlane.hostPathMapper.enabled
+      value: 'true'
+    - name: vcluster.controlPlane.distro.k8s.apiServer.extraArgs[0]
+      value: '--feature-gates=ImageVolume=true'
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
