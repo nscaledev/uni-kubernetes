@@ -1,8 +1,5 @@
 # Kubernetes Service
 
-![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/light-on-dark/logo.svg#gh-dark-mode-only)
-![Unikorn Logo](https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/dark-on-light/logo.svg#gh-light-mode-only)
-
 ## Overview
 
 ### Resources
@@ -33,8 +30,8 @@ This service is split up into domain specific micro-services:
 
 The use the Kubernetes service you first need to install:
 
-* [The identity service](https://github.com/unikorn-cloud/identity) to provide API authentication and authorization.
-* [The region service](https://github.com/unikorn-cloud/region) to provide provider agnostic cloud services (e.g. images, flavors and identity management).
+* [The identity service](https://github.com/nscaledev/uni-identity) to provide API authentication and authorization.
+* [The region service](https://github.com/nscaledev/uni-region) to provide provider agnostic cloud services (e.g. images, flavors and identity management).
 
 ### Installing the Service
 
@@ -168,7 +165,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://unikorn-cloud.github.io/kubernetes
+    repoURL: https://nscaledev.github.io/kubernetes
     chart: kubernetes
     targetRevision: v0.1.8
   destination:
@@ -185,7 +182,7 @@ spec:
 
 ### Configuring Service Authentication and Authorization
 
-The [Identity Service](https://github.com/unikorn-cloud/identity) describes how to configure a service organization, groups and role mappings for services that require them.
+The [Identity Service](https://github.com/nscaledev/uni-identity) describes how to configure a service organization, groups and role mappings for services that require them.
 
 This service requires asynchronous access to the Region API in order to poll cloud identity and physical network status during cluster creation, and delete those resources on cluster deletion.
 
