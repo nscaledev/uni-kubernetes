@@ -22,8 +22,8 @@ spec:
         {{- include "unikorn.cors.flags" . | nindent 8 }}
         {{- include "unikorn.otlp.flags" . | nindent 8 }}
         {{- include "unikorn.identity.flags" . | nindent 8 }}
-        {{- range $issuer := .Values.identity.externalIssuers }}
-        - --external-issuer={{ $issuer }}
+        {{- with $oidchost := .Values.identity.externalOIDCHost }}
+        - --oidc-host={{ $oidchost }}
         {{- end }}
         {{- include "unikorn.region.flags" . | nindent 8 }}
         {{- include "unikorn.mtls.flags" . | nindent 8 }}

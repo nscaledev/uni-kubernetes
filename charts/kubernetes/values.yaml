@@ -98,7 +98,7 @@ ingress:
 identity:
   # OIDC issuer used to discover OIDC configuration and verify access tokens.
   host: identity.unikorn-cloud.org
-  externalIssuers: ~
+  externalOIDCHost: ~
 
 region:
   # Region controller URL.
