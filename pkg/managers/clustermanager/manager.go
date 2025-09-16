@@ -25,7 +25,6 @@ import (
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/managers/clustermanager"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -60,13 +59,6 @@ func (*Factory) RegisterWatches(manager manager.Manager, controller controller.C
 		return err
 	}
 
-	return nil
-}
-
-// Upgrade can perform metadata upgrades of all versioned resources on restart/upgrade
-// of the controller.  This must not affect the spec in any way as it causes split brain
-// and potential fail.
-func (*Factory) Upgrade(_ client.Client) error {
 	return nil
 }
 
