@@ -310,6 +310,11 @@ spec:
                       This is only installed if a workload pool has a flavor that defines
                       a valid GPU specification and vendor.
                     type: boolean
+                  observabilityAgent:
+                    description: |-
+                      ObservabilityAgent enables deployment of the Nscale observability agent
+                      components used to forward logs, metrics and traces to the platform.
+                    type: boolean
                 type: object
               network:
                 description: Network defines the Kubernetes networking.

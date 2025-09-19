@@ -194,6 +194,9 @@ type KubernetesClusterFeaturesSpec struct {
 	// This is only installed if a workload pool has a flavor that defines
 	// a valid GPU specification and vendor.
 	GPUOperator bool `json:"gpuOperator,omitempty"`
+	// ObservabilityAgent enables the provision of the observability agent add-on.
+	// This deploys telemetry collectors for forwarding cluster observability data.
+	ObservabilityAgent bool `json:"observabilityAgent,omitempty"`
 }
 
 type KubernetesClusterWorkloadPoolsSpec struct {

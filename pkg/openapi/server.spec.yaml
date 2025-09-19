@@ -677,6 +677,17 @@ components:
           $ref: '#/components/schemas/kubernetesClusterAPI'
         networking:
           $ref: '#/components/schemas/kubernetesClusterNetwork'
+        features:
+          $ref: '#/components/schemas/kubernetesClusterFeatures'
+    kubernetesClusterFeatures:
+      description: Kubernetes cluster features configuration.
+      type: object
+      properties:
+        observabilityAgent:
+          description: |-
+            Enables the provision of the observability agent add-on.
+            This deploys telemetry collectors for forwarding cluster observability data.
+          type: boolean
     kubernetesClusterRead:
       description: Kubernetes cluster read.
       type: object

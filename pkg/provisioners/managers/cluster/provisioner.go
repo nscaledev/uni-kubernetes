@@ -53,9 +53,11 @@ import (
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/gatewayapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/metricsserver"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/nvidiagpuoperator"
+	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/observabilityagent"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackcloudprovider"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackplugincindercsi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/vcluster"
+	regionutil "github.com/unikorn-cloud/kubernetes/pkg/util/region"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -156,6 +158,10 @@ func (a *ApplicationReferenceGetter) openstackPluginCinderCSI(ctx context.Contex
 
 func (a *ApplicationReferenceGetter) metricsServer(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
 	return a.getApplication(ctx, "metrics-server")
+}
+
+func (a *ApplicationReferenceGetter) observabilityAgent(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
+	return a.getApplication(ctx, "observability-agent")
 }
 
 func (a *ApplicationReferenceGetter) nvidiaGPUOperator(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
@@ -314,6 +320,19 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 		return nil, err
 	}
 
+	hasObservabilityAgent := false
+
+	for _, application := range bundle.Spec.Applications {
+		if application.Name == "observability-agent" {
+			hasObservabilityAgent = true
+			break
+		}
+	}
+
+	if p.cluster.ObservabilityAgentEnabled() && !hasObservabilityAgent {
+		return nil, fmt.Errorf("%w: observability agent enabled but application not present in bundle %s", ErrResourceDependency, bundle.Name)
+	}
+
 	provisionerOptions, err := p.getProvisionerOptions(options)
 	if err != nil {
 		return nil, err
@@ -359,13 +378,24 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 			nvidiagpuoperator.New(apps.nvidiaGPUOperator),
 		),
 		conditional.New("cert-manager",
-			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorAMD },
+			func() bool {
+				return (p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorAMD) || p.cluster.ObservabilityAgentEnabled()
+			},
 			certmanager.New(apps.certManager),
 		),
 		conditional.New("amd-gpu-operator",
 			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorAMD },
 			amdgpuoperator.New(apps.amdGPUOperator),
 		),
+	}
+
+	if hasObservabilityAgent {
+		addOnsApplications = append(addOnsApplications,
+			conditional.New("observability-agent",
+				func() bool { return p.cluster.ObservabilityAgentEnabled() },
+				observabilityagent.New(apps.observabilityAgent),
+			),
+		)
 	}
 
 	// TODO: remove this conditional when smaller versions are all retired.
@@ -616,6 +646,30 @@ func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.Clie
 	return options, nil
 }
 
+func (p *Provisioner) setRegionLabel(ctx context.Context, client regionapi.ClientWithResponsesInterface) error {
+	organizationID, ok := p.cluster.Labels[coreconstants.OrganizationLabel]
+	if !ok {
+		return fmt.Errorf("%w: %s", ErrAnnotation, coreconstants.OrganizationLabel)
+	}
+
+	region, err := regionutil.Region(ctx, client, organizationID, p.cluster.Spec.RegionID)
+	if err != nil {
+		return err
+	}
+
+	if p.cluster.Annotations == nil {
+		p.cluster.Annotations = map[string]string{}
+	}
+
+	if p.cluster.Labels == nil {
+		p.cluster.Labels = map[string]string{}
+	}
+
+	p.cluster.Labels[observabilityagent.RegionNameLabel] = region.Metadata.Name
+
+	return nil
+}
+
 // Provision implements the Provision interface.
 func (p *Provisioner) Provision(ctx context.Context) error {
 	// The cluster manager is provisioned asynchronously as it takes a good minute
@@ -634,6 +688,10 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 
 	options, err := p.identityOptions(clientContext, client)
 	if err != nil {
+		return err
+	}
+
+	if err := p.setRegionLabel(clientContext, client); err != nil {
 		return err
 	}
 

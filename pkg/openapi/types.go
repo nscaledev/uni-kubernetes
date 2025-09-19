@@ -120,6 +120,13 @@ type KubernetesClusterAutoscaling struct {
 	MinimumReplicas int `json:"minimumReplicas"`
 }
 
+// KubernetesClusterFeatures Kubernetes cluster features configuration.
+type KubernetesClusterFeatures struct {
+	// ObservabilityAgent Enables the provision of the observability agent add-on.
+	// This deploys telemetry collectors for forwarding cluster observability data.
+	ObservabilityAgent *bool `json:"observabilityAgent,omitempty"`
+}
+
 // KubernetesClusterNetwork A Kubernetes cluster network settings.
 type KubernetesClusterNetwork struct {
 	// DnsNameservers A list of DNS name server to use.
@@ -162,6 +169,9 @@ type KubernetesClusterSpec struct {
 	// ClusterManagerId The name of the cluster manager to use, if one is not specified
 	// the system will create one for you.
 	ClusterManagerId *string `json:"clusterManagerId,omitempty"`
+
+	// Features Kubernetes cluster features configuration.
+	Features *KubernetesClusterFeatures `json:"features,omitempty"`
 
 	// Networking A Kubernetes cluster network settings.
 	Networking *KubernetesClusterNetwork `json:"networking,omitempty"`
