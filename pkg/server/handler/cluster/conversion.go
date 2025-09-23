@@ -559,6 +559,23 @@ func generateAutoUpgrade(request *openapi.KubernetesClusterAutoUpgrade) *unikorn
 	return out
 }
 
+// generateFeatures generates features configuration with default values and overrides from the API request.
+func generateFeatures(request *openapi.KubernetesClusterFeatures) *unikornv1.KubernetesClusterFeaturesSpec {
+	features := &unikornv1.KubernetesClusterFeaturesSpec{
+		Autoscaling:        true,
+		GPUOperator:        true,
+		ObservabilityAgent: false,
+	}
+
+	if request != nil {
+		if request.ObservabilityAgent != nil {
+			features.ObservabilityAgent = *request.ObservabilityAgent
+		}
+	}
+
+	return features
+}
+
 // preserveDefaulted recognizes that, while we try to be opinionated and do things for
 // the end user, there are operation reasons for disabling things, and preventing surprise
 // upgrades when you update a cluster.
@@ -569,6 +586,7 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster
 
 	cluster.Spec.Features.Autoscaling = g.existing.Spec.Features.Autoscaling
 	cluster.Spec.Features.GPUOperator = g.existing.Spec.Features.GPUOperator
+	cluster.Spec.Features.ObservabilityAgent = g.existing.Spec.Features.ObservabilityAgent
 }
 
 // generate generates the full cluster custom resource.
@@ -620,10 +638,7 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, req
 			Network:                      *network,
 			ControlPlane:                 *kubernetesControlPlane,
 			WorkloadPools:                *kubernetesWorkloadPools,
-			Features: &unikornv1.KubernetesClusterFeaturesSpec{
-				Autoscaling: true,
-				GPUOperator: true,
-			},
+			Features:                     generateFeatures(request.Spec.Features),
 		},
 	}
 

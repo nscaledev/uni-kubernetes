@@ -186,6 +186,11 @@ func (c *KubernetesCluster) GPUOperatorEnabled() bool {
 	return c.Spec.Features != nil && c.Spec.Features.GPUOperator
 }
 
+// ObservabilityAgentEnabled indicates whether to install the observability agent.
+func (c *KubernetesCluster) ObservabilityAgentEnabled() bool {
+	return c.Spec.Features != nil && c.Spec.Features.ObservabilityAgent
+}
+
 func (c *KubernetesCluster) GetWorkloadPool(name string) *KubernetesWorkloadPoolSpec {
 	for i, pool := range c.Spec.WorkloadPools.Pools {
 		if pool.Name == name {

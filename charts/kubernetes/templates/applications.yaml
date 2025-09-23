@@ -362,6 +362,33 @@ spec:
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
 metadata:
+  name: {{ include "resource.id" "observability-agent" }}
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+    unikorn-cloud.org/name: observability-agent
+  annotations:
+    unikorn-cloud.org/description: |-
+      Deploys the Nscale observability agent based on the OpenTelemetry collector
+      to forward cluster telemetry to the centralised observability platform.
+spec:
+  documentation: https://github.com/nscaledev/k8s-deploy-observability-agent
+  license: Apache-2.0 License
+  icon: iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/Pxir8wAAAABJRU5ErkJggg==
+  versions:
+  - version: 0.2.0
+    repo: https://github.com/nscaledev/k8s-deploy-observability-agent
+    branch: main
+    path: charts/observability-agent
+    namespace: telemetry-system
+    release: observability-agent
+    createNamespace: true
+    dependencies:
+    - name: cert-manager
+
+---
+apiVersion: unikorn-cloud.org/v1alpha1
+kind: HelmApplication
+metadata:
   name: {{ include "resource.id" "nvidia-gpu-operator" }}
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
