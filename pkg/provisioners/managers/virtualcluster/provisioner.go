@@ -69,7 +69,7 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 	}
 
 	// TODO: we could cache this, it's from a cache anyway, so quite cheap...
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -164,7 +164,7 @@ func (p *Provisioner) Object() unikornv1core.ManagableResourceInterface {
 // and a client.  The context must be used by subsequent API calls in order to extract
 // the access token.
 func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (context.Context, regionapi.ClientWithResponsesInterface, error) {
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

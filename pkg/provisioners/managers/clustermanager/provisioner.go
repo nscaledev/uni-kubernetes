@@ -74,7 +74,7 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		return nil, nil, err
 	}
 
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -184,7 +184,7 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 	// When deleting a manager, you need to also delete any managed clusters
 	// first to free up compute resources from the provider, so block until
 	// this is done.
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return err
 	}
