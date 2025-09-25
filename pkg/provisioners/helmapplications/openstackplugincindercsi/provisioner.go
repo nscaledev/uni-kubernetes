@@ -83,7 +83,7 @@ func (p *Provisioner) generateStorageClasses() []*storagev1.StorageClass {
 
 // Generate implements the application.ValuesGenerator interface.
 func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (any, error) {
-	client, err := coreclient.ProvisionerClientFromContext(ctx)
+	client, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}

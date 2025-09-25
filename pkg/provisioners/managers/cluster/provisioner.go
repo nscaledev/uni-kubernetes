@@ -88,7 +88,7 @@ func (a *ApplicationReferenceGetter) getBundle(ctx context.Context) (*unikornv1.
 	}
 
 	// TODO: we could cache this, it's from a cache anyway, so quite cheap...
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (a *ApplicationReferenceGetter) getApplication(ctx context.Context, name st
 		Name:      *reference.Name,
 	}
 
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -238,7 +238,7 @@ func (p *Provisioner) Object() unikornv1core.ManagableResourceInterface {
 
 // getClusterManager gets the control plane object that owns this cluster.
 func (p *Provisioner) getClusterManager(ctx context.Context) (*unikornv1.ClusterManager, error) {
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +440,7 @@ func (p *Provisioner) managerReady(ctx context.Context) error {
 // and a client.  The context must be used by subsequent API calls in order to extract
 // the access token.
 func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (context.Context, regionapi.ClientWithResponsesInterface, error) {
-	cli, err := coreclient.ProvisionerClientFromContext(ctx)
+	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
