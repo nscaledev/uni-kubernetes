@@ -34,15 +34,15 @@ rules:
   - delete
   - update
 # Manage clusters (cascading deletion).
+# TODO: redundant after v1.8.0.
 - apiGroups:
   - unikorn-cloud.org
   resources:
   - kubernetesclusters
   verbs:
   - list
-  - get
   - watch
-  - delete
+  - update
 # Get application bundles
 - apiGroups:
   - unikorn-cloud.org

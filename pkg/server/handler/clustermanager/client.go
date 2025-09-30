@@ -268,7 +268,11 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterM
 		},
 	}
 
-	if err := c.client.Delete(ctx, controlPlane); err != nil {
+	options := &client.DeleteOptions{
+		PropagationPolicy: ptr.To(metav1.DeletePropagationForeground),
+	}
+
+	if err := c.client.Delete(ctx, controlPlane, options); err != nil {
 		if kerrors.IsNotFound(err) {
 			return errors.HTTPNotFound().WithError(err)
 		}

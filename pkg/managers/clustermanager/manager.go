@@ -18,14 +18,20 @@ limitations under the License.
 package clustermanager
 
 import (
+	"context"
+	"fmt"
+
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
+	"github.com/unikorn-cloud/core/pkg/errors"
 	coremanager "github.com/unikorn-cloud/core/pkg/manager"
 	"github.com/unikorn-cloud/core/pkg/manager/options"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/managers/clustermanager"
 
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -68,4 +74,54 @@ func (*Factory) Schemes() []coreclient.SchemeAdder {
 	return []coreclient.SchemeAdder{
 		unikornv1.AddToScheme,
 	}
+}
+
+func (*Factory) Upgrade(ctx context.Context, cli client.Client, options *options.Options) error {
+	// v1.8.0 made cluster managers cascade delete clusters via owner references
+	// rather than bespoke code.
+	clusterManagers := &unikornv1.ClusterManagerList{}
+
+	if err := cli.List(ctx, clusterManagers, &client.ListOptions{}); err != nil {
+		return err
+	}
+
+	clusterManagerMap := map[string]*unikornv1.ClusterManager{}
+
+	for i := range clusterManagers.Items {
+		clusterManagerMap[clusterManagers.Items[i].Name] = &clusterManagers.Items[i]
+	}
+
+	clusters := &unikornv1.KubernetesClusterList{}
+
+	if err := cli.List(ctx, clusters, &client.ListOptions{}); err != nil {
+		return err
+	}
+
+	for i := range clusters.Items {
+		cluster := &clusters.Items[i]
+
+		clusterManager, ok := clusterManagerMap[cluster.Spec.ClusterManagerID]
+		if !ok {
+			return fmt.Errorf("%w: cluster %s references unknown manager", errors.ErrConsistency, cluster.Name)
+		}
+
+		ok, err := controllerutil.HasOwnerReference(cluster.OwnerReferences, clusterManager, cli.Scheme())
+		if err != nil {
+			return err
+		}
+
+		if ok {
+			continue
+		}
+
+		if err := controllerutil.SetOwnerReference(clusterManager, cluster, cli.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+			return err
+		}
+
+		if err := cli.Update(ctx, cluster); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

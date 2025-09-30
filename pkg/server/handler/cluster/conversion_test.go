@@ -180,6 +180,14 @@ func clusterRequestFixture(version string) *openapi.KubernetesClusterWrite {
 	}
 }
 
+func clusterManagerFixture() *unikornv1.ClusterManager {
+	return &unikornv1.ClusterManager{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "cluster-manager",
+		},
+	}
+}
+
 func existingClusterFixture(t *testing.T, version string) *unikornv1.KubernetesCluster {
 	t.Helper()
 
@@ -391,7 +399,7 @@ func TestClusterGenerate(t *testing.T) {
 
 	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
 
-	cluster, err := cluster.Generate(ctx, g, appclient, clusterRequestFixture(kubernetesVersion2))
+	cluster, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), clusterRequestFixture(kubernetesVersion2))
 	require.NoError(t, err)
 
 	// Metadata is all correct...
@@ -440,7 +448,7 @@ func TestClusterUpgrade(t *testing.T) {
 	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
 	g = cluster.WithExisting(g, existingClusterFixture(t, kubernetesVersion1))
 
-	cluster, err := cluster.Generate(ctx, g, appclient, clusterRequestFixture(kubernetesVersion3))
+	cluster, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), clusterRequestFixture(kubernetesVersion3))
 	require.NoError(t, err)
 
 	// Metadata is all correct...
