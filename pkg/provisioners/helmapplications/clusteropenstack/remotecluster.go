@@ -120,7 +120,7 @@ func (g *RemoteCluster) Config(ctx context.Context) (*clientcmdapi.Config, error
 	// Retry getting the secret until it exists.
 	if err := clusterContext.Client.Get(ctx, secretKey, secret); err != nil {
 		if errors.IsNotFound(err) {
-			log.Info("kubernetes cluster kubeconfig does not exist, yielding")
+			log.Info("kubernetes cluster kubeconfig does not exist")
 
 			return nil, provisioners.ErrYield
 		}
