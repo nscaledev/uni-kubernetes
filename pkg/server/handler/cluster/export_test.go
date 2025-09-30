@@ -33,6 +33,6 @@ func GenerateApplicationBundleName(ctx context.Context, g *generator, appclient 
 	return g.generateApplicationBundleName(ctx, appclient, in)
 }
 
-func Generate(ctx context.Context, g *generator, appclient appBundleLister, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
-	return g.generate(ctx, appclient, request)
+func Generate(ctx context.Context, g *generator, appclient appBundleLister, clusterManager *unikornv1.ClusterManager, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
+	return g.generate(ctx, appclient, clusterManager, request)
 }

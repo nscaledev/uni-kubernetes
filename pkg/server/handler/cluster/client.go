@@ -510,6 +510,35 @@ type appBundleListerPlus interface {
 	ListClusterManager(ctx context.Context) (*unikornv1.ClusterManagerApplicationBundleList, error)
 }
 
+func (c *Client) getClusterManager(ctx context.Context, namespace string, request *openapi.KubernetesClusterWrite) (*unikornv1.ClusterManager, error) {
+	clusterManager := &unikornv1.ClusterManager{}
+
+	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: *request.Spec.ClusterManagerId}, clusterManager); err != nil {
+		if kerrors.IsNotFound(err) {
+			return nil, errors.OAuth2InvalidRequest("requested cluster manager does not exist").WithError(err)
+		}
+
+		return nil, errors.OAuth2ServerError("cluster manager get failed").WithError(err)
+	}
+
+	return clusterManager, nil
+}
+
+func (c *Client) getOrCreateClusterManager(ctx context.Context, appclient appBundleListerPlus, organizationID, projectID string, namespace string, request *openapi.KubernetesClusterWrite) (*unikornv1.ClusterManager, error) {
+	if request.Spec.ClusterManagerId != nil {
+		return c.getClusterManager(ctx, namespace, request)
+	}
+
+	clusterManager, err := clustermanager.NewClient(c.client).CreateImplicit(ctx, appclient, organizationID, projectID)
+	if err != nil {
+		return nil, err
+	}
+
+	request.Spec.ClusterManagerId = ptr.To(clusterManager.Name)
+
+	return clusterManager, nil
+}
+
 // Create creates the implicit cluster identified by the JTW claims.
 func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, organizationID, projectID string, request *openapi.KubernetesClusterWrite) (*openapi.KubernetesClusterRead, error) {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
@@ -517,17 +546,12 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 		return nil, err
 	}
 
-	// Implicitly create the controller manager.
-	if request.Spec.ClusterManagerId == nil {
-		clusterManager, err := clustermanager.NewClient(c.client).CreateImplicit(ctx, appclient, organizationID, projectID)
-		if err != nil {
-			return nil, err
-		}
-
-		request.Spec.ClusterManagerId = ptr.To(clusterManager.Name)
+	clusterManager, err := c.getOrCreateClusterManager(ctx, appclient, organizationID, projectID, namespace.Name, request)
+	if err != nil {
+		return nil, err
 	}
 
-	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, appclient, request)
+	cluster, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).generate(ctx, appclient, clusterManager, request)
 	if err != nil {
 		return nil, err
 	}
@@ -600,7 +624,12 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 		return err
 	}
 
-	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, appclient, request)
+	clusterManager, err := c.getClusterManager(ctx, namespace.Name, request)
+	if err != nil {
+		return err
+	}
+
+	required, err := newGenerator(c.client, c.options, c.region, namespace.Name, organizationID, projectID).withExisting(current).generate(ctx, appclient, clusterManager, request)
 	if err != nil {
 		return err
 	}

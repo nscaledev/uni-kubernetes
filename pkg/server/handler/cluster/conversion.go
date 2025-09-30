@@ -39,6 +39,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
 var (
@@ -574,7 +575,7 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster
 // generate generates the full cluster custom resource.
 // TODO: there are a lot of parameters being passed about, we should make this
 // a struct and pass them as a single blob.
-func (g *generator) generate(ctx context.Context, appclient appBundleLister, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
+func (g *generator) generate(ctx context.Context, appclient appBundleLister, clusterManager *unikornv1.ClusterManager, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
 	kubernetesControlPlane, err := g.generateControlPlane(ctx, request)
 	if err != nil {
 		return nil, err
@@ -629,6 +630,11 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, req
 
 	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
 		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+	}
+
+	// The resource belongs to its cluster manager, for cascading deletion.
+	if err := controllerutil.SetOwnerReference(clusterManager, out, g.client.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+		return nil, errors.OAuth2ServerError("unable to set resource owner").WithError(err)
 	}
 
 	g.preserveDefaultedFields(out)
