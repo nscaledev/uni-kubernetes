@@ -48,3 +48,28 @@ spec:
       kind: HelmApplication
       name: {{ include "resource.id" "cluster-api" }}
       version: v0.2.5
+---
+apiVersion: unikorn-cloud.org/v1alpha1
+kind: ClusterManagerApplicationBundle
+metadata:
+  name: cluster-manager-2.1.0
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+spec:
+  version: 2.1.0
+  applications:
+  - name: vcluster
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "vcluster" }}
+      version: 0.25.2
+  - name: cert-manager
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "cert-manager" }}
+      version: v1.17.4
+  - name: cluster-api
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "cluster-api" }}
+      version: v0.2.5
