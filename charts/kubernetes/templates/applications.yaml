@@ -35,6 +35,15 @@ spec:
     parameters:
     - name: crds.enabled
       value: "true"
+  - version: v1.17.4
+    repo: https://charts.jetstack.io
+    chart: cert-manager
+    release: cert-manager
+    namespace: cert-manager
+    createNamespace: true
+    parameters:
+    - name: crds.enabled
+      value: "true"
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
@@ -84,6 +93,24 @@ spec:
       value: 'true'
     - name: controlPlane.statefulSet.image.tag
       value: 0.24.2-rc.2
+  - version: 0.25.2
+    repo: https://charts.loft.sh
+    chart: vcluster
+    release: vcluster
+    createNamespace: true
+    parameters:
+    - name: controlPlane.statefulSet.resources.limits.memory
+      value: 4Gi
+    - name: controlPlane.hostPathMapper.enabled
+      value: 'true'
+    - name: controlPlane.statefulSet.persistence.volumeClaim.retentionPolicy
+      value: Delete
+    - name: controlPlane.statefulSet.persistence.volumeClaim.size
+      value: 10Gi
+    - name: controlPlane.serviceMonitor.enabled
+      value: 'true'
+    - name: controlPlane.statefulSet.image.tag
+      value: 0.25.2
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
