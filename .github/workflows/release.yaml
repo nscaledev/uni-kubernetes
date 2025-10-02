@@ -19,10 +19,9 @@ jobs:
       with:
         fetch-depth: 0
     - name: Setup Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v6
       with:
         go-version-file: go.mod
-        cache: true
     - name: Install Helm
       uses: azure/setup-helm@v3
       env:
