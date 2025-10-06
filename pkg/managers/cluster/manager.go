@@ -21,6 +21,7 @@ import (
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	coremanager "github.com/unikorn-cloud/core/pkg/manager"
 	"github.com/unikorn-cloud/core/pkg/manager/options"
+	"github.com/unikorn-cloud/core/pkg/util"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/managers/cluster"
@@ -39,8 +40,8 @@ type Factory struct{}
 var _ coremanager.ControllerFactory = &Factory{}
 
 // Metadata returns the application, version and revision.
-func (*Factory) Metadata() (string, string, string) {
-	return constants.Application, constants.Version, constants.Revision
+func (*Factory) Metadata() util.ServiceDescriptor {
+	return constants.ServiceDescriptor()
 }
 
 // Options returns any options to be added to the CLI flags and passed to the reconciler.
