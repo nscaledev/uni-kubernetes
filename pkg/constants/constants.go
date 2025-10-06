@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"os"
 	"path"
+
+	"github.com/unikorn-cloud/core/pkg/util"
 )
 
 var (
@@ -42,4 +44,12 @@ var (
 // call out ot other micro services.
 func VersionString() string {
 	return fmt.Sprintf("%s/%s (revision/%s)", Application, Version, Revision)
+}
+
+func ServiceDescriptor() util.ServiceDescriptor {
+	return util.ServiceDescriptor{
+		Name:     Application,
+		Version:  Version,
+		Revision: Revision,
+	}
 }
