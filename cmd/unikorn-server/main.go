@@ -41,6 +41,8 @@ func start() {
 	s := &server.Server{}
 	s.AddFlags(pflag.CommandLine)
 
+	pflag.Parse()
+
 	// Get logging going first, log sinks will expect JSON formatted output for everything.
 	s.SetupLogging()
 
