@@ -147,7 +147,7 @@ func (s *Server) GetServer(client client.Client) (*http.Server, error) {
 
 	// NOTE: any clients that are used, must issue new tokens as this service to
 	// prevent the user having to be granted excessive privilege.
-	issuer := identityclient.NewTokenIssuer(client, s.IdentityOptions, &s.ClientOptions, constants.Application, constants.Version)
+	issuer := identityclient.NewTokenIssuer(client, s.IdentityOptions, &s.ClientOptions, constants.ServiceDescriptor())
 
 	identity := identityclient.New(client, s.IdentityOptions, &s.ClientOptions)
 	region := regionclient.New(client, s.RegionOptions, &s.ClientOptions)
