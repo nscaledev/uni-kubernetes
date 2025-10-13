@@ -41,9 +41,9 @@ var (
 
 // ControllerClient creates a new authenticated client and context for use against the region service.
 func ControllerClient(ctx context.Context, cli client.Client, httpOptions *coreclient.HTTPClientOptions, identityOptions *identityclient.Options, regionOptions *regionclient.Options, traceName string, resource metav1.Object) (context.Context, regionapi.ClientWithResponsesInterface, error) {
-	tokenIssuer := identityclient.NewTokenIssuer(cli, identityOptions, httpOptions, constants.Application, constants.Version)
+	tokenIssuer := identityclient.NewTokenIssuer(cli, identityOptions, httpOptions, constants.ServiceDescriptor())
 
-	token, err := tokenIssuer.Issue(ctx, traceName)
+	token, err := tokenIssuer.Issue(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

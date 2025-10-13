@@ -439,15 +439,15 @@ func (p *Provisioner) managerReady(ctx context.Context) error {
 // getRegionClient returns an authenticated context with a client credentials access token
 // and a client.  The context must be used by subsequent API calls in order to extract
 // the access token.
-func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (context.Context, regionapi.ClientWithResponsesInterface, error) {
+func (p *Provisioner) getRegionClient(ctx context.Context) (context.Context, regionapi.ClientWithResponsesInterface, error) {
 	cli, err := coreclient.FromContext(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	tokenIssuer := identityclient.NewTokenIssuer(cli, p.options.identityOptions, &p.options.clientOptions, constants.Application, constants.Version)
+	tokenIssuer := identityclient.NewTokenIssuer(cli, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor())
 
-	token, err := tokenIssuer.Issue(ctx, traceName)
+	token, err := tokenIssuer.Issue(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -627,7 +627,7 @@ func (p *Provisioner) Provision(ctx context.Context) error {
 	// Likewise identity creation is provisioned asynchronously as it too takes a
 	// long time, especially if a physical network is being provisioned and that
 	// needs to go out and talk to swiches.
-	clientContext, client, err := p.getRegionClient(ctx, "provision")
+	clientContext, client, err := p.getRegionClient(ctx)
 	if err != nil {
 		return err
 	}
@@ -668,7 +668,7 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 	// An accepted status means the API has recoded the deletion event and
 	// we can delete the cluster, a not found means it's been deleted already
 	// and again can proceed.  The goal here is not to leak resources.
-	clientContext, client, err := p.getRegionClient(ctx, "deprovision")
+	clientContext, client, err := p.getRegionClient(ctx)
 	if err != nil {
 		return err
 	}
