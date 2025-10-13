@@ -4,7 +4,7 @@ info:
   description: |-
     The Kubernetes Service API provides services that allows provisioning and life cycle
     management of Kubernetes clusters.
-  version: 1.8.0
+  version: 1.9.0
 paths:
   /api/v1/organizations/{organizationID}/regions:
     description: |-
