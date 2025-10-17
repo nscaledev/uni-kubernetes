@@ -34,15 +34,14 @@ import (
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
+	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
-	"github.com/unikorn-cloud/identity/pkg/principal"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/clusteropenstack"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/vcluster"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/clustermanager"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/identity"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -93,14 +92,14 @@ type Client struct {
 	options *Options
 
 	// identity is a client to access the identity service.
-	identity *identity.Client
+	identity identityclient.APIClientGetter
 
 	// region is a client to access regions.
 	region *region.Client
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, options *Options, identity *identity.Client, region *region.Client) *Client {
+func NewClient(client client.Client, options *Options, identity identityclient.APIClientGetter, region *region.Client) *Client {
 	return &Client{
 		client:   client,
 		options:  options,
@@ -208,7 +207,7 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 	return secret.Data["value"], nil
 }
 
-func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.KubernetesCluster) (*identityapi.AllocationWrite, error) {
+func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.KubernetesCluster) (identityapi.ResourceAllocationList, error) {
 	flavors, err := c.region.Flavors(ctx, organizationID, resource.Spec.RegionID)
 	if err != nil {
 		return nil, err
@@ -253,113 +252,25 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 		}
 	}
 
-	request := &identityapi.AllocationWrite{
-		Metadata: coreapi.ResourceWriteMetadata{
-			Name: constants.UndefinedName,
+	allocations := identityapi.ResourceAllocationList{
+		{
+			Kind:      "clusters",
+			Committed: 1,
+			Reserved:  0,
 		},
-		Spec: identityapi.AllocationSpec{
-			Kind: "kubernetescluster",
-			Id:   resource.Name,
-			Allocations: identityapi.ResourceAllocationList{
-				{
-					Kind:      "clusters",
-					Committed: 1,
-					Reserved:  0,
-				},
-				{
-					Kind:      "servers",
-					Committed: serversCommitted,
-					Reserved:  serversReserved,
-				},
-				{
-					Kind:      "gpus",
-					Committed: gpusCommitted,
-					Reserved:  gpusReserved,
-				},
-			},
+		{
+			Kind:      "servers",
+			Committed: serversCommitted,
+			Reserved:  serversReserved,
+		},
+		{
+			Kind:      "gpus",
+			Committed: gpusCommitted,
+			Reserved:  gpusReserved,
 		},
 	}
 
-	return request, nil
-}
-
-func (c *Client) createAllocation(ctx context.Context, resource *unikornv1.KubernetesCluster) (*identityapi.AllocationRead, error) {
-	principal, err := principal.GetPrincipal(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	allocations, err := c.generateAllocations(ctx, principal.OrganizationID, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := c.identity.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, principal.OrganizationID, principal.ProjectID, *allocations)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode() != http.StatusCreated {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	return resp.JSON201, nil
-}
-
-func (c *Client) updateAllocation(ctx context.Context, resource *unikornv1.KubernetesCluster) error {
-	principal, err := principal.FromResource(resource)
-	if err != nil {
-		return err
-	}
-
-	allocations, err := c.generateAllocations(ctx, principal.OrganizationID, resource)
-	if err != nil {
-		return err
-	}
-
-	client, err := c.identity.Client(ctx)
-	if err != nil {
-		return err
-	}
-
-	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principal.OrganizationID, principal.ProjectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	return nil
-}
-
-func (c *Client) deleteAllocation(ctx context.Context, resource *unikornv1.KubernetesCluster) error {
-	principal, err := principal.FromResource(resource)
-	if err != nil {
-		return err
-	}
-
-	client, err := c.identity.Client(ctx)
-	if err != nil {
-		return err
-	}
-
-	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principal.OrganizationID, principal.ProjectID, resource.Annotations[constants.AllocationAnnotation])
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode() != http.StatusAccepted {
-		return coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	return nil
+	return allocations, nil
 }
 
 func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, regionID, clusterID string) (*regionapi.IdentityRead, error) {
@@ -441,13 +352,12 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 	return resp.JSON201, nil
 }
 
-func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, allocation *identityapi.AllocationRead, identity *regionapi.IdentityRead, cluster *unikornv1.KubernetesCluster) error {
+func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, identity *regionapi.IdentityRead, cluster *unikornv1.KubernetesCluster) error {
 	// Save the identity ID for later cleanup.
 	if cluster.Annotations == nil {
 		cluster.Annotations = map[string]string{}
 	}
 
-	cluster.Annotations[constants.AllocationAnnotation] = allocation.Metadata.Id
 	cluster.Annotations[constants.IdentityAnnotation] = identity.Metadata.Id
 
 	// Apply any region specific configuration based on feature flags.
@@ -556,9 +466,13 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 		return nil, err
 	}
 
-	allocation, err := c.createAllocation(ctx, cluster)
+	allocations, err := c.generateAllocations(ctx, organizationID, cluster)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to create quota allocation").WithError(err)
+		return nil, errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+	}
+
+	if err := identityclient.NewAllocations(c.client, c.identity).Create(ctx, cluster, allocations); err != nil {
+		return nil, err
 	}
 
 	identity, err := c.createIdentity(ctx, organizationID, projectID, request.Spec.RegionId, cluster.Name)
@@ -566,7 +480,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 		return nil, err
 	}
 
-	if err := c.applyCloudSpecificConfiguration(ctx, organizationID, projectID, request.Spec.RegionId, allocation, identity, cluster); err != nil {
+	if err := c.applyCloudSpecificConfiguration(ctx, organizationID, projectID, request.Spec.RegionId, identity, cluster); err != nil {
 		return nil, err
 	}
 
@@ -586,11 +500,15 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 
 	cluster, err := c.get(ctx, namespace.Name, clusterID)
 	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return errors.HTTPNotFound().WithError(err)
-		}
+		return err
+	}
 
-		return errors.OAuth2ServerError("failed to get cluster")
+	if cluster.DeletionTimestamp != nil {
+		return nil
+	}
+
+	if err := identityclient.NewAllocations(c.client, c.identity).Delete(ctx, cluster); err != nil {
+		return err
 	}
 
 	if err := c.client.Delete(ctx, cluster); err != nil {
@@ -599,10 +517,6 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 		}
 
 		return errors.OAuth2ServerError("failed to delete cluster").WithError(err)
-	}
-
-	if err := c.deleteAllocation(ctx, cluster); err != nil {
-		return errors.OAuth2ServerError("failed to delete quota allocation").WithError(err)
 	}
 
 	return nil
@@ -648,8 +562,13 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	updated.Annotations = required.Annotations
 	updated.Spec = required.Spec
 
-	if err := c.updateAllocation(ctx, updated); err != nil {
-		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
+	allocations, err := c.generateAllocations(ctx, organizationID, updated)
+	if err != nil {
+		return errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+	}
+
+	if err := identityclient.NewAllocations(c.client, c.identity).Update(ctx, updated, allocations); err != nil {
+		return err
 	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {

@@ -20,22 +20,19 @@ import (
 	"context"
 	goerrors "errors"
 	"fmt"
-	"net/http"
 	"slices"
 
 	"github.com/unikorn-cloud/core/pkg/constants"
-	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
+	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
-	"github.com/unikorn-cloud/identity/pkg/principal"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
 	provisioner "github.com/unikorn-cloud/kubernetes/pkg/provisioners/managers/virtualcluster"
-	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/identity"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionutil "github.com/unikorn-cloud/kubernetes/pkg/util/region"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
@@ -63,14 +60,14 @@ type Client struct {
 	client client.Client
 
 	// identity is a client to access the identity service.
-	identity *identity.Client
+	identity identityclient.APIClientGetter
 
 	// region is a client to access regions.
 	region *region.Client
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, identity *identity.Client, region *region.Client) *Client {
+func NewClient(client client.Client, identity identityclient.APIClientGetter, region *region.Client) *Client {
 	return &Client{
 		client:   client,
 		identity: identity,
@@ -197,7 +194,7 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 	return secret.Data["config"], nil
 }
 
-func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.VirtualKubernetesCluster) (*identityapi.AllocationWrite, error) {
+func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.VirtualKubernetesCluster) (identityapi.ResourceAllocationList, error) {
 	flavors, err := c.region.Flavors(ctx, organizationID, resource.Spec.RegionID)
 	if err != nil {
 		return nil, err
@@ -226,122 +223,25 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 		}
 	}
 
-	request := &identityapi.AllocationWrite{
-		Metadata: coreapi.ResourceWriteMetadata{
-			Name: constants.UndefinedName,
+	allocations := identityapi.ResourceAllocationList{
+		{
+			Kind:      "clusters",
+			Committed: 1,
+			Reserved:  0,
 		},
-		Spec: identityapi.AllocationSpec{
-			Kind: "virtualkubernetescluster",
-			Id:   resource.Name,
-			Allocations: identityapi.ResourceAllocationList{
-				{
-					Kind:      "clusters",
-					Committed: 1,
-					Reserved:  0,
-				},
-				{
-					Kind:      "servers",
-					Committed: serversCommitted,
-					Reserved:  0,
-				},
-				{
-					Kind:      "gpus",
-					Committed: gpusCommitted,
-					Reserved:  0,
-				},
-			},
+		{
+			Kind:      "servers",
+			Committed: serversCommitted,
+			Reserved:  0,
+		},
+		{
+			Kind:      "gpus",
+			Committed: gpusCommitted,
+			Reserved:  0,
 		},
 	}
 
-	return request, nil
-}
-
-func (c *Client) createAllocation(ctx context.Context, resource *unikornv1.VirtualKubernetesCluster) (*identityapi.AllocationRead, error) {
-	principal, err := principal.GetPrincipal(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	allocations, err := c.generateAllocations(ctx, principal.OrganizationID, resource)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := c.identity.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(ctx, principal.OrganizationID, principal.ProjectID, *allocations)
-	if err != nil {
-		return nil, err
-	}
-
-	if resp.StatusCode() != http.StatusCreated {
-		return nil, fmt.Errorf("%w: unexpected status code %d", ErrAPI, resp.StatusCode())
-	}
-
-	return resp.JSON201, nil
-}
-
-func (c *Client) updateAllocation(ctx context.Context, resource *unikornv1.VirtualKubernetesCluster) error {
-	principal, err := principal.FromResource(resource)
-	if err != nil {
-		return err
-	}
-
-	allocations, err := c.generateAllocations(ctx, principal.OrganizationID, resource)
-	if err != nil {
-		return err
-	}
-
-	client, err := c.identity.Client(ctx)
-	if err != nil {
-		return err
-	}
-
-	resp, err := client.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principal.OrganizationID, principal.ProjectID, resource.Annotations[constants.AllocationAnnotation], *allocations)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode() != http.StatusOK {
-		return fmt.Errorf("%w: unexpected status code %d", ErrAPI, resp.StatusCode())
-	}
-
-	return nil
-}
-
-func (c *Client) deleteAllocation(ctx context.Context, resource *unikornv1.VirtualKubernetesCluster) error {
-	principal, err := principal.FromResource(resource)
-	if err != nil {
-		return err
-	}
-
-	client, err := c.identity.Client(ctx)
-	if err != nil {
-		return err
-	}
-
-	resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(ctx, principal.OrganizationID, principal.ProjectID, resource.Annotations[constants.AllocationAnnotation])
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode() != http.StatusAccepted {
-		return fmt.Errorf("%w: unexpected status code %d", ErrAPI, resp.StatusCode())
-	}
-
-	return nil
-}
-
-func (c *Client) applyCloudSpecificConfiguration(allocation *identityapi.AllocationRead, cluster *unikornv1.VirtualKubernetesCluster) {
-	// Save the identity ID for later cleanup.
-	if cluster.Annotations == nil {
-		cluster.Annotations = map[string]string{}
-	}
-
-	cluster.Annotations[constants.AllocationAnnotation] = allocation.Metadata.Id
+	return allocations, nil
 }
 
 func metadataMutator(required, current metav1.Object) error {
@@ -379,12 +279,14 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 		return nil, err
 	}
 
-	allocation, err := c.createAllocation(ctx, cluster)
+	allocations, err := c.generateAllocations(ctx, organizationID, cluster)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to create quota allocation").WithError(err)
+		return nil, errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
 	}
 
-	c.applyCloudSpecificConfiguration(allocation, cluster)
+	if err := identityclient.NewAllocations(c.client, c.identity).Create(ctx, cluster, allocations); err != nil {
+		return nil, err
+	}
 
 	if err := c.client.Create(ctx, cluster); err != nil {
 		return nil, errors.OAuth2ServerError("failed to create cluster").WithError(err)
@@ -402,11 +304,15 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 
 	cluster, err := c.get(ctx, namespace.Name, clusterID)
 	if err != nil {
-		if kerrors.IsNotFound(err) {
-			return errors.HTTPNotFound().WithError(err)
-		}
+		return err
+	}
 
-		return errors.OAuth2ServerError("failed to get cluster")
+	if cluster.DeletionTimestamp != nil {
+		return nil
+	}
+
+	if err := identityclient.NewAllocations(c.client, c.identity).Delete(ctx, cluster); err != nil {
+		return err
 	}
 
 	if err := c.client.Delete(ctx, cluster); err != nil {
@@ -415,10 +321,6 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 		}
 
 		return errors.OAuth2ServerError("failed to delete cluster").WithError(err)
-	}
-
-	if err := c.deleteAllocation(ctx, cluster); err != nil {
-		return errors.OAuth2ServerError("failed to delete quota allocation").WithError(err)
 	}
 
 	return nil
@@ -456,8 +358,13 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	updated.Annotations = required.Annotations
 	updated.Spec = required.Spec
 
-	if err := c.updateAllocation(ctx, updated); err != nil {
-		return errors.OAuth2ServerError("failed to update quota allocation").WithError(err)
+	allocations, err := c.generateAllocations(ctx, organizationID, updated)
+	if err != nil {
+		return errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+	}
+
+	if err := identityclient.NewAllocations(c.client, c.identity).Update(ctx, updated, allocations); err != nil {
+		return err
 	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
