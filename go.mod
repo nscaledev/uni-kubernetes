@@ -13,9 +13,9 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/pflag v1.0.6
 	github.com/stretchr/testify v1.10.0
-	github.com/unikorn-cloud/core v1.10.0
-	github.com/unikorn-cloud/identity v1.10.0
-	github.com/unikorn-cloud/region v1.10.0
+	github.com/unikorn-cloud/core v1.11.0-rc1
+	github.com/unikorn-cloud/identity v1.11.0-rc1
+	github.com/unikorn-cloud/region v1.11.0-rc1
 	go.opentelemetry.io/otel/sdk v1.35.0
 	go.uber.org/mock v0.5.2
 	gopkg.in/ini.v1 v1.67.0
@@ -83,6 +83,7 @@ require (
 	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
 	github.com/spf13/cobra v1.9.1 // indirect
+	github.com/spjmurray/go-util v0.1.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
