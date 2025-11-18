@@ -40,6 +40,7 @@ import (
 	"github.com/unikorn-cloud/core/pkg/util"
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
@@ -234,6 +235,20 @@ var _ provisioners.ManagerProvisioner = &Provisioner{}
 
 func (p *Provisioner) Object() unikornv1core.ManagableResourceInterface {
 	return &p.cluster
+}
+
+func (p *Provisioner) identityClient(ctx context.Context) (identityapi.ClientWithResponsesInterface, error) {
+	client, err := coreclient.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := identityclient.NewTokenIssuer(client, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor()).Issue(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return identityclient.New(client, p.options.identityOptions, &p.options.clientOptions).ControllerClient(ctx, token, &p.cluster)
 }
 
 // getClusterManager gets the control plane object that owns this cluster.
@@ -674,6 +689,15 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 	}
 
 	if err := p.deleteIdentity(clientContext, client); err != nil {
+		return err
+	}
+
+	cli, err := coreclient.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := identityclient.NewAllocations(cli, p.identityClient).Delete(ctx, &p.cluster); err != nil {
 		return err
 	}
 
