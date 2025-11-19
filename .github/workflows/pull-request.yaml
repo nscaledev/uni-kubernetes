@@ -61,6 +61,6 @@ jobs:
         name: code-coverage
         path: cover.html
     - name: Run Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       env:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
