@@ -19,7 +19,6 @@ package cluster
 
 import (
 	"context"
-	goerrors "errors"
 	"fmt"
 	"net"
 	"slices"
@@ -28,7 +27,7 @@ import (
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
-	"github.com/unikorn-cloud/core/pkg/server/errors"
+	errorsv2 "github.com/unikorn-cloud/core/pkg/server/v2/errors"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
@@ -40,15 +39,6 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-)
-
-var (
-	// ErrResourceLookup is raised when we are looking for a referenced resource
-	// but cannot find it.
-	ErrResourceLookup = goerrors.New("could not find the requested resource")
-
-	// ErrUnhandledCase is raised when an unhandled switch case is encountered.
-	ErrUnhandledCase = goerrors.New("handled case")
 )
 
 // generator wraps up the myriad things we need to pass around as an object
@@ -179,7 +169,7 @@ func convertAutoUpgrade(in *unikornv1.ApplicationBundleAutoUpgradeSpec) *openapi
 
 // convert converts from a custom resource into the API definition.
 func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
-	out := &openapi.KubernetesClusterRead{
+	return &openapi.KubernetesClusterRead{
 		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags),
 		Spec: openapi.KubernetesClusterSpec{
 			RegionId:              in.Spec.RegionID,
@@ -190,8 +180,6 @@ func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
 			WorkloadPools:         convertWorkloadPools(in),
 		},
 	}
-
-	return out
 }
 
 // uconvertList converts from a custom resource list into the API definition.
@@ -209,7 +197,11 @@ func convertList(in *unikornv1.KubernetesClusterList) openapi.KubernetesClusters
 func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.KubernetesClusterApplicationBundle, error) {
 	applicationBundles, err := appclient.ListCluster(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve kubernetes cluster application bundles: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.KubernetesClusterApplicationBundle) bool {
@@ -225,7 +217,11 @@ func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appB
 	})
 
 	if len(applicationBundles.Items) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an application bundle")
+		err = errorsv2.NewInternalError().
+			WithSimpleCause("no application bundles available").
+			Prefixed()
+
+		return nil, err
 	}
 
 	// Return the newest bundle
@@ -236,10 +232,14 @@ func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appB
 func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *openapi.KubernetesClusterWrite) (*regionapi.Flavor, error) {
 	flavors, err := g.region.Flavors(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list flavors").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve flavors: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
-	// No baremetal flavors, and no GPUs.  Would be very wasteful otherwise!
+	// No bare metal flavors, and no GPUs.  Would be very wasteful otherwise!
 	flavors = slices.DeleteFunc(flavors, func(x regionapi.Flavor) bool {
 		if x.Spec.Baremetal != nil && *x.Spec.Baremetal {
 			return true
@@ -261,7 +261,11 @@ func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *open
 	})
 
 	if len(flavors) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select a control plane flavor")
+		err = errorsv2.NewInternalError().
+			WithSimpleCause("no flavors available").
+			Prefixed()
+
+		return nil, err
 	}
 
 	// Pick the most "epic" flavor possible, things tend to melt if you are too stingy.
@@ -273,7 +277,11 @@ func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *open
 func (g *generator) defaultImage(ctx context.Context, request *openapi.KubernetesClusterWrite) (*regionapi.Image, error) {
 	images, err := g.region.Images(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list images").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve images: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	// Only get the version asked for.
@@ -286,7 +294,11 @@ func (g *generator) defaultImage(ctx context.Context, request *openapi.Kubernete
 	})
 
 	if len(images) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an image")
+		err = errorsv2.NewInternalError().
+			WithSimpleCause("no images available").
+			Prefixed()
+
+		return nil, err
 	}
 
 	return &images[0], nil
@@ -318,14 +330,19 @@ func (g *generator) generateAPI(request *openapi.KubernetesClusterAPI) (*unikorn
 	var subjectAlternativeNames []string
 
 	if request.AllowedPrefixes != nil {
-		for i := range *request.AllowedPrefixes {
-			_, net, err := net.ParseCIDR((*request.AllowedPrefixes)[i])
+		for _, prefix := range *request.AllowedPrefixes {
+			_, ipNet, err := net.ParseCIDR(prefix)
 			if err != nil {
-				return nil, errors.OAuth2InvalidRequest("failed to parse network prefix").WithError(err)
+				err = errorsv2.NewInvalidRequestError().
+					WithCausef("failed to parse allowed prefix: %w", err).
+					WithErrorDescription("One of the specified allowed prefixes is not a valid CIDR notation.").
+					Prefixed()
+
+				return nil, err
 			}
 
 			allowedPrefixes = append(allowedPrefixes, unikornv1core.IPv4Prefix{
-				IPNet: *net,
+				IPNet: *ipNet,
 			})
 		}
 	}
@@ -354,30 +371,45 @@ func (g *generator) generateNetwork(request *openapi.KubernetesClusterNetwork) (
 	//nolint:nestif
 	if request != nil {
 		if request.NodePrefix != nil {
-			_, net, err := net.ParseCIDR(*request.NodePrefix)
+			_, ipNet, err := net.ParseCIDR(*request.NodePrefix)
 			if err != nil {
-				return nil, errors.OAuth2InvalidRequest("failed to parse network prefix").WithError(err)
+				err = errorsv2.NewInvalidRequestError().
+					WithCausef("failed to parse node prefix: %w", err).
+					WithErrorDescription("One of the specified node prefixes is not a valid CIDR notation.").
+					Prefixed()
+
+				return nil, err
 			}
 
-			nodeNetwork = *net
+			nodeNetwork = *ipNet
 		}
 
 		if request.ServicePrefix != nil {
-			_, net, err := net.ParseCIDR(*request.ServicePrefix)
+			_, ipNet, err := net.ParseCIDR(*request.ServicePrefix)
 			if err != nil {
-				return nil, errors.OAuth2InvalidRequest("failed to parse network prefix").WithError(err)
+				err = errorsv2.NewInvalidRequestError().
+					WithCausef("failed to parse service prefix: %w", err).
+					WithErrorDescription("One of the specified service prefixes is not a valid CIDR notation.").
+					Prefixed()
+
+				return nil, err
 			}
 
-			serviceNetwork = *net
+			serviceNetwork = *ipNet
 		}
 
 		if request.PodPrefix != nil {
-			_, net, err := net.ParseCIDR(*request.PodPrefix)
+			_, ipNet, err := net.ParseCIDR(*request.PodPrefix)
 			if err != nil {
-				return nil, errors.OAuth2InvalidRequest("failed to parse network prefix").WithError(err)
+				err = errorsv2.NewInvalidRequestError().
+					WithCausef("failed to parse pod prefix: %w", err).
+					WithErrorDescription("One of the specified pod prefixes is not a valid CIDR notation.").
+					Prefixed()
+
+				return nil, err
 			}
 
-			podNetwork = *net
+			podNetwork = *ipNet
 		}
 	}
 
@@ -410,7 +442,12 @@ func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi
 	if m.Disk != nil {
 		size, err := resource.ParseQuantity(fmt.Sprintf("%dGi", m.Disk.Size))
 		if err != nil {
-			return nil, errors.OAuth2InvalidRequest("failed to parse disk size").WithError(err)
+			err = errorsv2.NewInvalidRequestError().
+				WithCausef("failed to parse disk size: %w", err).
+				WithErrorDescription("One of the specified disk sizes is invalid.").
+				Prefixed()
+
+			return nil, err
 		}
 
 		machine.DiskSize = &size
@@ -593,6 +630,11 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, clu
 
 	version, err := semver.NewVersion(request.Spec.Version)
 	if err != nil {
+		err = errorsv2.NewInvalidTokenError().
+			WithCausef("failed to parse version: %w", err).
+			WithErrorDescription("The provided version is not a valid semantic version.").
+			Prefixed()
+
 		return nil, err
 	}
 
@@ -629,12 +671,16 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, clu
 	}
 
 	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
-		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+		return nil, err
 	}
 
 	// The resource belongs to its cluster manager, for cascading deletion.
 	if err := controllerutil.SetOwnerReference(clusterManager, out, g.client.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-		return nil, errors.OAuth2ServerError("unable to set resource owner").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to set owner reference: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	g.preserveDefaultedFields(out)

@@ -19,13 +19,12 @@ package virtualcluster
 import (
 	"context"
 	goerrors "errors"
-	"fmt"
 	"slices"
 
 	"github.com/unikorn-cloud/core/pkg/constants"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
-	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
+	errorsv2 "github.com/unikorn-cloud/core/pkg/server/v2/errors"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
@@ -41,18 +40,13 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	ErrConsistency = goerrors.New("consistency error")
-
-	ErrAPI = goerrors.New("remote api error")
-)
+var ErrConsistency = goerrors.New("consistency error")
 
 // Client wraps up cluster related management handling.
 type Client struct {
@@ -77,51 +71,62 @@ func NewClient(client client.Client, identity identityclient.APIClientGetter, re
 
 // List returns all clusters owned by the implicit control plane.
 func (c *Client) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDVirtualclustersParams) (openapi.VirtualKubernetesClusters, error) {
-	result := &unikornv1.VirtualKubernetesClusterList{}
-
-	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
-	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
-	}
-
-	selector := labels.NewSelector()
-	selector = selector.Add(*requirement)
-
-	options := &client.ListOptions{
-		LabelSelector: selector,
-	}
-
-	if err := c.client.List(ctx, result, options); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
-	}
-
 	tagSelector, err := coreutil.DecodeTagSelectorParam(params.Tag)
 	if err != nil {
 		return nil, err
 	}
 
-	result.Items = slices.DeleteFunc(result.Items, func(resource unikornv1.VirtualKubernetesCluster) bool {
+	opts := []client.ListOption{
+		&client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(labels.Set{
+				constants.OrganizationLabel: organizationID,
+			}),
+		},
+	}
+
+	var list unikornv1.VirtualKubernetesClusterList
+	if err := c.client.List(ctx, &list, opts...); err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve virtual kubernetes clusters: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	list.Items = slices.DeleteFunc(list.Items, func(resource unikornv1.VirtualKubernetesCluster) bool {
 		return !resource.Spec.Tags.ContainsAll(tagSelector)
 	})
 
-	slices.SortStableFunc(result.Items, unikornv1.CompareVirtualKubernetesCluster)
+	slices.SortStableFunc(list.Items, unikornv1.CompareVirtualKubernetesCluster)
 
-	return convertList(result), nil
+	return convertList(&list), nil
 }
 
 // get returns the cluster.
 func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikornv1.VirtualKubernetesCluster, error) {
-	result := &unikornv1.VirtualKubernetesCluster{}
-
-	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterID}, result); err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil, errors.HTTPNotFound().WithError(err)
-		}
-
-		return nil, errors.OAuth2ServerError("unable to get cluster").WithError(err)
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      clusterID,
 	}
 
-	return result, nil
+	var cluster unikornv1.VirtualKubernetesCluster
+	if err := c.client.Get(ctx, key, &cluster); err != nil {
+		if kerrors.IsNotFound(err) {
+			err = errorsv2.NewResourceMissingError("virtual kubernetes cluster").
+				WithCause(err).
+				Prefixed()
+
+			return nil, err
+		}
+
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve virtual kubernetes cluster: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	return &cluster, nil
 }
 
 // regionKubernetesClient wraps up access to the remote Kubernetes cluster for
@@ -134,16 +139,28 @@ func (c *Client) regionKubernetesClient(ctx context.Context, organizationID stri
 
 	kubeconfig, err := regionutil.Kubeconfig(region)
 	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to read kubeconfig from region: %w", err).
+			Prefixed()
+
 		return nil, err
 	}
 
 	clientConfig, err := clientcmd.NewClientConfigFromBytes(kubeconfig)
 	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to parse kubeconfig from region: %w", err).
+			Prefixed()
+
 		return nil, err
 	}
 
 	rawConfig, err := clientConfig.RawConfig()
 	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to convert kubeconfig into raw format: %w", err).
+			Prefixed()
+
 		return nil, err
 	}
 
@@ -153,13 +170,26 @@ func (c *Client) regionKubernetesClient(ctx context.Context, organizationID stri
 
 	restConfig, err := clientcmd.BuildConfigFromKubeconfigGetter("", getter)
 	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to build rest config from kubeconfig: %w", err).
+			Prefixed()
+
 		return nil, err
 	}
 
-	return client.New(restConfig, client.Options{})
+	cli, err := client.New(restConfig, client.Options{})
+	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to create kubernetes client from rest config: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	return cli, nil
 }
 
-// GetKubeconfig returns the kubernetes configuation associated with a cluster.
+// GetKubeconfig returns the kubernetes configuration associated with a cluster.
 func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, clusterID string) ([]byte, error) {
 	project, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
@@ -176,19 +206,26 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 		return nil, err
 	}
 
-	objectKey := client.ObjectKey{
+	key := client.ObjectKey{
 		Namespace: provisioner.RemoteNamespace(cluster),
 		Name:      "vc-" + virtualcluster.ReleaseName(cluster),
 	}
 
-	secret := &corev1.Secret{}
-
-	if err := cli.Get(ctx, objectKey, secret); err != nil {
+	var secret corev1.Secret
+	if err := cli.Get(ctx, key, &secret); err != nil {
 		if kerrors.IsNotFound(err) {
-			return nil, errors.HTTPNotFound().WithError(err)
+			err = errorsv2.NewResourceMissingError("secret").
+				WithCause(err).
+				Prefixed()
+
+			return nil, err
 		}
 
-		return nil, errors.OAuth2ServerError("unable to get cluster configuration").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve secret: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	return secret.Data["config"], nil
@@ -207,13 +244,18 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 	for _, pool := range resource.Spec.WorkloadPools {
 		serversCommitted += pool.Replicas
 
-		flavorByID := func(f regionapi.Flavor) bool {
+		isTargetFlavor := func(f regionapi.Flavor) bool {
 			return f.Metadata.Id == pool.FlavorID
 		}
 
-		index := slices.IndexFunc(flavors, flavorByID)
+		index := slices.IndexFunc(flavors, isTargetFlavor)
 		if index < 0 {
-			return nil, fmt.Errorf("%w: flavorID does not exist", ErrConsistency)
+			err = errorsv2.NewInvalidRequestError().
+				WithSimpleCause("no matching flavor found when generating allocations").
+				WithErrorDescription("One of the specified flavor IDs is invalid or cannot be resolved.").
+				Prefixed()
+
+			return nil, err
 		}
 
 		flavor := flavors[index]
@@ -281,7 +323,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 
 	allocations, err := c.generateAllocations(ctx, organizationID, cluster)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return nil, err
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Create(ctx, cluster, allocations); err != nil {
@@ -289,7 +331,11 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := c.client.Create(ctx, cluster); err != nil {
-		return nil, errors.OAuth2ServerError("failed to create cluster").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to create virtual kubernetes cluster: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	return convert(cluster), nil
@@ -317,10 +363,14 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 
 	if err := c.client.Delete(ctx, cluster); err != nil {
 		if kerrors.IsNotFound(err) {
-			return errors.HTTPNotFound().WithError(err)
+			return errorsv2.NewResourceMissingError("virtual kubernetes cluster").
+				WithCause(err).
+				Prefixed()
 		}
 
-		return errors.OAuth2ServerError("failed to delete cluster").WithError(err)
+		return errorsv2.NewInternalError().
+			WithCausef("failed to delete virtual kubernetes cluster: %w", err).
+			Prefixed()
 	}
 
 	return nil
@@ -334,7 +384,10 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if namespace.DeletionTimestamp != nil {
-		return errors.OAuth2InvalidRequest("control plane is being deleted")
+		return errorsv2.NewConflictError().
+			WithSimpleCause("virtual kubernetes cluster is being deleted").
+			WithErrorDescription("The virtual kubernetes cluster is being deleted and cannot be modified.").
+			Prefixed()
 	}
 
 	current, err := c.get(ctx, namespace.Name, clusterID)
@@ -348,7 +401,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator, metadataMutator); err != nil {
-		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
+		return err
 	}
 
 	// Experience has taught me that modifying caches by accident is a bad thing
@@ -360,7 +413,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 
 	allocations, err := c.generateAllocations(ctx, organizationID, updated)
 	if err != nil {
-		return errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return err
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Update(ctx, updated, allocations); err != nil {
@@ -368,7 +421,9 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
-		return errors.OAuth2ServerError("failed to patch cluster").WithError(err)
+		return errorsv2.NewInternalError().
+			WithCausef("failed to patch virtual kubernetes cluster: %w", err).
+			Prefixed()
 	}
 
 	return nil

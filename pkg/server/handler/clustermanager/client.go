@@ -22,9 +22,9 @@ import (
 	"slices"
 
 	"github.com/unikorn-cloud/core/pkg/constants"
-	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
+	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
-	"github.com/unikorn-cloud/core/pkg/server/errors"
+	errorsv2 "github.com/unikorn-cloud/core/pkg/server/v2/errors"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
@@ -33,7 +33,6 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,25 +65,32 @@ func (c *Client) CreateImplicit(ctx context.Context, appclient appBundleLister, 
 		return nil, err
 	}
 
-	var existing unikornv1.ClusterManagerList
-
-	options := &client.ListOptions{
-		Namespace:     namespace.Name,
-		LabelSelector: labels.SelectorFromSet(labels.Set{constants.NameLabel: "default"}),
+	opts := []client.ListOption{
+		&client.ListOptions{
+			Namespace: namespace.Name,
+			LabelSelector: labels.SelectorFromSet(labels.Set{
+				constants.NameLabel: "default",
+			}),
+		},
 	}
 
-	if err := c.client.List(ctx, &existing, options); err != nil {
+	var list unikornv1.ClusterManagerList
+	if err := c.client.List(ctx, &list, opts...); err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve cluster managers: %w", err).
+			Prefixed()
+
 		return nil, err
 	}
 
-	if len(existing.Items) != 0 {
-		return &existing.Items[0], nil
+	if len(list.Items) != 0 {
+		return &list.Items[0], nil
 	}
 
 	log.Info("creating implicit control plane")
 
 	request := &openapi.ClusterManagerWrite{
-		Metadata: coreopenapi.ResourceWriteMetadata{
+		Metadata: coreapi.ResourceWriteMetadata{
 			Name:        "default",
 			Description: ptr.To("Implicitly provisioned cluster controller"),
 		},
@@ -100,11 +106,9 @@ func (c *Client) CreateImplicit(ctx context.Context, appclient appBundleLister, 
 
 // convert converts from Kubernetes into OpenAPI types.
 func (c *Client) convert(in *unikornv1.ClusterManager) *openapi.ClusterManagerRead {
-	out := &openapi.ClusterManagerRead{
+	return &openapi.ClusterManagerRead{
 		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags),
 	}
-
-	return out
 }
 
 // convertList converts from Kubernetes into OpenAPI types.
@@ -120,49 +124,64 @@ func (c *Client) convertList(in *unikornv1.ClusterManagerList) openapi.ClusterMa
 
 // List returns all control planes.
 func (c *Client) List(ctx context.Context, organizationID string) (openapi.ClusterManagers, error) {
-	result := &unikornv1.ClusterManagerList{}
-
-	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
-	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
+	opts := []client.ListOption{
+		&client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(labels.Set{
+				constants.OrganizationLabel: organizationID,
+			}),
+		},
 	}
 
-	selector := labels.NewSelector()
-	selector = selector.Add(*requirement)
+	var list unikornv1.ClusterManagerList
+	if err := c.client.List(ctx, &list, opts...); err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve cluster managers: %w", err).
+			Prefixed()
 
-	options := &client.ListOptions{
-		LabelSelector: selector,
+		return nil, err
 	}
 
-	if err := c.client.List(ctx, result, options); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list control planes").WithError(err)
-	}
+	slices.SortStableFunc(list.Items, unikornv1.CompareClusterManager)
 
-	slices.SortStableFunc(result.Items, unikornv1.CompareClusterManager)
-
-	return c.convertList(result), nil
+	return c.convertList(&list), nil
 }
 
 // get returns the control plane.
 func (c *Client) get(ctx context.Context, namespace, clusterManagerID string) (*unikornv1.ClusterManager, error) {
-	result := &unikornv1.ClusterManager{}
-
-	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterManagerID}, result); err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil, errors.HTTPNotFound().WithError(err)
-		}
-
-		return nil, errors.OAuth2ServerError("failed to get control plane").WithError(err)
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      clusterManagerID,
 	}
 
-	return result, nil
+	var manager unikornv1.ClusterManager
+	if err := c.client.Get(ctx, key, &manager); err != nil {
+		if kerrors.IsNotFound(err) {
+			err = errorsv2.NewResourceMissingError("cluster manager").
+				WithCause(err).
+				Prefixed()
+
+			return nil, err
+		}
+
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to delete cluster manager: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	return &manager, nil
 }
 
 // defaultApplicationBundle returns a default application bundle.
 func (c *Client) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.ClusterManagerApplicationBundle, error) {
 	applicationBundles, err := appclient.ListClusterManager(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve cluster managers: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.ClusterManagerApplicationBundle) bool {
@@ -178,10 +197,14 @@ func (c *Client) defaultApplicationBundle(ctx context.Context, appclient appBund
 	})
 
 	if len(applicationBundles.Items) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an application bundle")
+		err = errorsv2.NewInternalError().
+			WithSimpleCause("no application bundles available").
+			Prefixed()
+
+		return nil, err
 	}
 
-	// Sort by semanitc version...
+	// Sort by semantic version...
 	slices.SortedStableFunc(slices.Values(applicationBundles.Items), func(a, b unikornv1.ClusterManagerApplicationBundle) int {
 		return a.Spec.Version.Compare(&b.Spec.Version)
 	})
@@ -207,7 +230,7 @@ func (c *Client) generate(ctx context.Context, appclient appBundleLister, namesp
 	}
 
 	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
-		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+		return nil, err
 	}
 
 	return out, nil
@@ -221,7 +244,12 @@ func (c *Client) create(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if namespace.DeletionTimestamp != nil {
-		return nil, errors.OAuth2InvalidRequest("project is being deleted")
+		err = errorsv2.NewConflictError().
+			WithSimpleCause("project is being deleted").
+			WithErrorDescription("The project is being deleted and cannot accept resources creations.").
+			Prefixed()
+
+		return nil, err
 	}
 
 	resource, err := c.generate(ctx, appclient, namespace, organizationID, projectID, request)
@@ -232,10 +260,19 @@ func (c *Client) create(ctx context.Context, appclient appBundleLister, organiza
 	if err := c.client.Create(ctx, resource); err != nil {
 		// TODO: we can do a cached lookup to save the API traffic.
 		if kerrors.IsAlreadyExists(err) {
-			return nil, errors.HTTPConflict()
+			err = errorsv2.NewConflictError().
+				WithCausef("cluster manager %s already exists", resource.Name).
+				WithErrorDescription("The provided cluster manager name is already in use. Please choose a different name and try again.").
+				Prefixed()
+
+			return nil, err
 		}
 
-		return nil, errors.OAuth2ServerError("failed to create control plane").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to create cluster manager: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	return resource, nil
@@ -258,26 +295,33 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterM
 	}
 
 	if namespace.DeletionTimestamp != nil {
-		return errors.OAuth2InvalidRequest("project is being deleted")
+		return errorsv2.NewConflictError().
+			WithSimpleCause("project is being deleted").
+			WithErrorDescription("The project is being deleted and cannot accept resource deletions.").
+			Prefixed()
 	}
 
-	controlPlane := &unikornv1.ClusterManager{
+	manager := &unikornv1.ClusterManager{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      clusterManagerID,
 			Namespace: namespace.Name,
 		},
 	}
 
-	options := &client.DeleteOptions{
-		PropagationPolicy: ptr.To(metav1.DeletePropagationForeground),
+	opts := []client.DeleteOption{
+		client.PropagationPolicy(metav1.DeletePropagationForeground),
 	}
 
-	if err := c.client.Delete(ctx, controlPlane, options); err != nil {
+	if err := c.client.Delete(ctx, manager, opts...); err != nil {
 		if kerrors.IsNotFound(err) {
-			return errors.HTTPNotFound().WithError(err)
+			return errorsv2.NewResourceMissingError("cluster manager").
+				WithCause(err).
+				Prefixed()
 		}
 
-		return errors.OAuth2ServerError("failed to delete control plane").WithError(err)
+		return errorsv2.NewInternalError().
+			WithCausef("failed to delete cluster manager: %w", err).
+			Prefixed()
 	}
 
 	return nil
@@ -291,7 +335,10 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if namespace.DeletionTimestamp != nil {
-		return errors.OAuth2InvalidRequest("project is being deleted")
+		return errorsv2.NewConflictError().
+			WithSimpleCause("project is being deleted").
+			WithErrorDescription("The project is being deleted and cannot accept resource updates.").
+			Prefixed()
 	}
 
 	current, err := c.get(ctx, namespace.Name, clusterManagerID)
@@ -305,7 +352,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator); err != nil {
-		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
+		return err
 	}
 
 	updated := current.DeepCopy()
@@ -314,7 +361,9 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	updated.Spec = required.Spec
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
-		return errors.OAuth2ServerError("failed to patch control plane").WithError(err)
+		return errorsv2.NewInternalError().
+			WithCausef("failed to patch cluster manager: %w", err).
+			Prefixed()
 	}
 
 	return nil

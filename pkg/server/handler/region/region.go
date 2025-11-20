@@ -23,7 +23,8 @@ import (
 	"slices"
 	"time"
 
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
+	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
+	errorsv2 "github.com/unikorn-cloud/core/pkg/server/v2/errors"
 	"github.com/unikorn-cloud/core/pkg/util/cache"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
@@ -84,6 +85,10 @@ func (c *Client) Client(ctx context.Context) (regionapi.ClientWithResponsesInter
 
 	client, err := c.clientGetter(ctx)
 	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve region API client: %w", err).
+			Prefixed()
+
 		return nil, err
 	}
 
@@ -97,23 +102,23 @@ func (c *Client) Client(ctx context.Context) (regionapi.ClientWithResponsesInter
 
 // Get gets a specific region.
 func (c *Client) Get(ctx context.Context, organizationID, regionID string) (*regionapi.RegionDetailRead, error) {
-	client, err := c.Client(ctx)
+	regionAPIClient, err := c.Client(ctx)
 	if err != nil {
 		return nil, err
 	}
 
 	// TODO: Danger, danger, this returns possible sensitive information that must not
 	// be leaked.  Add the correct API.
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(ctx, organizationID, regionID)
+	response, err := regionAPIClient.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(ctx, organizationID, regionID)
 	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve region detail: %w", err).
+			Prefixed()
+
 		return nil, err
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	return resp.JSON200, nil
+	return coreapi.ParseJSONPointerResponse[regionapi.RegionDetailRead](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
 }
 
 func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.RegionRead, error) {
@@ -121,21 +126,26 @@ func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.R
 		return regions, nil
 	}
 
-	client, err := c.Client(ctx)
+	regionAPIClient, err := c.Client(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
+	response, err := regionAPIClient.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
+	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve regions: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	data, err := coreapi.ParseJSONPointerResponse[regionapi.Regions](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	regions := *resp.JSON200
+	regions := *data
 
 	c.regionCache.Add(organizationID, regions, time.Hour)
 
@@ -165,23 +175,26 @@ func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) (
 		return flavors, nil
 	}
 
-	client, err := c.Client(ctx)
+	regionAPIClient, err := c.Client(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
+	response, err := regionAPIClient.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
+	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve flavors: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	data, err := coreapi.ParseJSONPointerResponse[regionapi.Flavors](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	flavors := *resp.JSON200
-
-	flavors = slices.DeleteFunc(flavors, func(x regionapi.Flavor) bool {
+	flavors := slices.DeleteFunc(*data, func(x regionapi.Flavor) bool {
 		// kubeadm requires at least 2 VCPU and 2 GiB memory.
 		return x.Spec.Cpus < 2 || x.Spec.Memory < 2
 	})
@@ -199,23 +212,26 @@ func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([
 		return images, nil
 	}
 
-	client, err := c.Client(ctx)
+	regionAPIClient, err := c.Client(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, organizationID, regionID)
+	response, err := regionAPIClient.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, organizationID, regionID)
+	if err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve images: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	data, err := coreapi.ParseJSONPointerResponse[regionapi.Images](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
 	if err != nil {
 		return nil, err
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
-	}
-
-	images := *resp.JSON200
-
-	images = slices.DeleteFunc(images, func(x regionapi.Image) bool {
+	images := slices.DeleteFunc(*data, func(x regionapi.Image) bool {
 		return x.Spec.SoftwareVersions == nil || (*x.Spec.SoftwareVersions)["kubernetes"] == ""
 	})
 

@@ -18,25 +18,15 @@ package virtualcluster
 
 import (
 	"context"
-	goerrors "errors"
 	"slices"
 
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
-	"github.com/unikorn-cloud/core/pkg/server/errors"
+	errorsv2 "github.com/unikorn-cloud/core/pkg/server/v2/errors"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-var (
-	// ErrResourceLookup is raised when we are looking for a referenced resource
-	// but cannot find it.
-	ErrResourceLookup = goerrors.New("could not find the requested resource")
-
-	// ErrUnhandledCase is raised when an unhandled switch case is encountered.
-	ErrUnhandledCase = goerrors.New("handled case")
 )
 
 // generator wraps up the myriad things we need to pass around as an object
@@ -96,15 +86,13 @@ func convertWorkloadPools(in *unikornv1.VirtualKubernetesCluster) []openapi.Virt
 
 // convert converts from a custom resource into the API definition.
 func convert(in *unikornv1.VirtualKubernetesCluster) *openapi.VirtualKubernetesClusterRead {
-	out := &openapi.VirtualKubernetesClusterRead{
+	return &openapi.VirtualKubernetesClusterRead{
 		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags),
 		Spec: openapi.VirtualKubernetesClusterSpec{
 			RegionId:      in.Spec.RegionID,
 			WorkloadPools: convertWorkloadPools(in),
 		},
 	}
-
-	return out
 }
 
 // uconvertList converts from a custom resource list into the API definition.
@@ -122,7 +110,11 @@ func convertList(in *unikornv1.VirtualKubernetesClusterList) openapi.VirtualKube
 func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.VirtualKubernetesClusterApplicationBundle, error) {
 	applicationBundles, err := appclient.ListVirtualCluster(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve virtual clusters: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.VirtualKubernetesClusterApplicationBundle) bool {
@@ -138,7 +130,11 @@ func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appB
 	})
 
 	if len(applicationBundles.Items) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an application bundle")
+		err = errorsv2.NewInternalError().
+			WithSimpleCause("no application bundles available").
+			Prefixed()
+
+		return nil, err
 	}
 
 	// Return the newest bundle
@@ -197,7 +193,7 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, req
 	}
 
 	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
-		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+		return nil, err
 	}
 
 	g.preserveDefaultedFields(out)
