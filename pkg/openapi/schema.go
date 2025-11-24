@@ -123,7 +123,7 @@ var swaggerSpec = []string{
 	"ScrNkzrZ7BVRtdZLWRBr7ZN0M1AdeaYhSZAIqhbXelGuDsXUyJX79deheJNefJSG0mReboZ8wMK0ZrgD",
 	"U/hYGMmkzoX8Ia2wz+8wec5tO4nSj+9F6I29uVKxHB8d2fIJteixO9mDRCPL9IAe9ZiprOwFPDqy8B/d",
 	"D49KI5nLkXls1qipo2HbaXQzQqlm0zyyzU0pm/KV/RmubUsXU1Lg7FiZ93mx8SPbHa6WvWfa/QWLIIQJ",
-	"s50wImDL6p4VVSGUy8kL05dasQ96g36vb0K1Vua9sXfc6/eObbbt3JDuCMf06H5wVKyYkUefyje7P6at",
+	"s50wImDL6p4VVSGUy8kL05dasQ96g0Gvb0K1Vua9sXfc6/eObbbt3JDuCMf06H5wVKyYkUefyje7P6at",
 	"N6PW9p6XURyCLW2odvYorCtFSt4hKh3R/cNeW5NjpQUTHaTmgiezeQmjHddHy/xTcZTmsfcmrD5dYm75",
 	"noIwDRNxap4CQQ1NGg0NC0GnCUtt7vQ72dDZNE9adBEI7V3ayIyPJTWf4ERx7XEGE5Y2XJsmLLCmu2Zi",
 	"r+PNoOFg5Fcq67i21z+5NIQiDfUw2R1npovwS1AXMf0weFMk/JsS2Z9XiF655HfY77fp1uy9o7a7ZB87",
@@ -141,7 +141,7 @@ var swaggerSpec = []string{
 	"EIu8PQRS7iaH6QIBNe3es+ZK32dXaX54ZW+ImbCsuZvtLfAD4iLTXd+bZoz3TvJ/KHZhK/RnWVIiiVGg",
 	"lRyQtFFA4bONVd5bh9Rt1Ng27Wn+uvrtoBaOmq4E3kLCjz65HiYvHo9au+IXNn5368JalYvSJKiXrIZM",
 	"/Nxcefc3c3vPHEtkr5x1tyBuK2Nv3aJ+ckt6cpFz6zmI3F9e5HbcUosC19ZGtCAytsHpzuJWbEf6dNJ2",
-	"adfz5MJmV3OQtYOstcjaTqdxyyvxK27xfivym47DNpWk1l5IB3f34O7+V9TnPz7+bwAAAP//6R7gNzHI",
+	"adfz5MJmV3OQtYOstcjaTqdxyyvxK27xfivym47DNpWk1l5IB3f34O7+V9TnPz7+bwAAAP//gZ5VBTHI",
 	"AAA=",
 }
 
