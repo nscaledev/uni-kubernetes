@@ -42,69 +42,44 @@ const (
 func regionTypeFilter(t openapi.RegionTypeParameter) (func(regionapi.RegionRead) bool, error) {
 	switch t {
 	case openapi.Physical:
-		return func(x regionapi.RegionRead) bool { return x.Spec.Type == regionapi.Kubernetes }, nil
+		return func(x regionapi.RegionRead) bool { return x.Spec.Type == regionapi.RegionTypeKubernetes }, nil
 	case openapi.Virtual:
-		return func(x regionapi.RegionRead) bool { return x.Spec.Type != regionapi.Kubernetes }, nil
+		return func(x regionapi.RegionRead) bool { return x.Spec.Type != regionapi.RegionTypeKubernetes }, nil
 	}
 
 	return nil, ErrUnhandled
 }
 
-// ClientGetterFunc allows us to lazily instantiate a client only when needed to
-// avoid the TLS handshake and token exchange.
-type ClientGetterFunc func(context.Context) (regionapi.ClientWithResponsesInterface, error)
-
 // Client provides a caching layer for retrieval of region assets, and lazy population.
 type Client struct {
-	clientGetter  ClientGetterFunc
-	client        regionapi.ClientWithResponsesInterface
-	clientTimeout time.Time
-	regionCache   *cache.LRUExpireCache[string, []regionapi.RegionRead]
-	flavorCache   *cache.LRUExpireCache[string, []regionapi.Flavor]
-	imageCache    *cache.LRUExpireCache[string, []regionapi.Image]
+	client      regionapi.ClientWithResponsesInterface
+	regionCache *cache.LRUExpireCache[string, []regionapi.RegionRead]
+	flavorCache *cache.LRUExpireCache[string, []regionapi.Flavor]
+	imageCache  *cache.LRUExpireCache[string, []regionapi.Image]
 }
 
 var _ ClientInterface = &Client{}
 
 // New returns a new client.
-func New(clientGetter ClientGetterFunc) *Client {
+func New(client regionapi.ClientWithResponsesInterface) *Client {
 	return &Client{
-		clientGetter: clientGetter,
-		regionCache:  cache.NewLRUExpireCache[string, []regionapi.RegionRead](defaultCacheSize),
-		flavorCache:  cache.NewLRUExpireCache[string, []regionapi.Flavor](defaultCacheSize),
-		imageCache:   cache.NewLRUExpireCache[string, []regionapi.Image](defaultCacheSize),
+		client:      client,
+		regionCache: cache.NewLRUExpireCache[string, []regionapi.RegionRead](defaultCacheSize),
+		flavorCache: cache.NewLRUExpireCache[string, []regionapi.Flavor](defaultCacheSize),
+		imageCache:  cache.NewLRUExpireCache[string, []regionapi.Image](defaultCacheSize),
 	}
 }
 
 // Client returns a client.
-func (c *Client) Client(ctx context.Context) (regionapi.ClientWithResponsesInterface, error) {
-	if time.Now().Before(c.clientTimeout) {
-		return c.client, nil
-	}
-
-	client, err := c.clientGetter(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: the timeout should be driven by the token expiry, so we need to expose
-	// that eventually.
-	c.client = client
-	c.clientTimeout = time.Now().Add(10 * time.Minute)
-
-	return client, nil
+func (c *Client) Client() regionapi.ClientWithResponsesInterface {
+	return c.client
 }
 
 // Get gets a specific region.
 func (c *Client) Get(ctx context.Context, organizationID, regionID string) (*regionapi.RegionDetailRead, error) {
-	client, err := c.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
 	// TODO: Danger, danger, this returns possible sensitive information that must not
 	// be leaked.  Add the correct API.
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(ctx, organizationID, regionID)
+	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -121,12 +96,7 @@ func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.R
 		return regions, nil
 	}
 
-	client, err := c.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
+	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
 	if err != nil {
 		return nil, err
 	}
@@ -165,12 +135,7 @@ func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) (
 		return flavors, nil
 	}
 
-	client, err := c.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
+	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -199,12 +164,7 @@ func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([
 		return images, nil
 	}
 
-	client, err := c.Client(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, organizationID, regionID)
+	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}

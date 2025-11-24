@@ -92,14 +92,14 @@ type Client struct {
 	options *Options
 
 	// identity is a client to access the identity service.
-	identity identityclient.APIClientGetter
+	identity identityapi.ClientWithResponsesInterface
 
 	// region is a client to access regions.
 	region *region.Client
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, options *Options, identity identityclient.APIClientGetter, region *region.Client) *Client {
+func NewClient(client client.Client, options *Options, identity identityapi.ClientWithResponsesInterface, region *region.Client) *Client {
 	return &Client{
 		client:   client,
 		options:  options,
@@ -292,12 +292,7 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 		},
 	}
 
-	client, err := c.region.Client(ctx)
-	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
-	}
-
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
+	resp, err := c.region.Client().PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("unable to create identity").WithError(err)
 	}
@@ -335,12 +330,7 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 		},
 	}
 
-	client, err := c.region.Client(ctx)
-	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
-	}
-
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
+	resp, err := c.region.Client().PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
 	if err != nil {
 		return nil, errors.OAuth2ServerError("unable to physical network").WithError(err)
 	}

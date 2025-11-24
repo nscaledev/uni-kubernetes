@@ -60,14 +60,14 @@ type Client struct {
 	client client.Client
 
 	// identity is a client to access the identity service.
-	identity identityclient.APIClientGetter
+	identity identityapi.ClientWithResponsesInterface
 
 	// region is a client to access regions.
 	region *region.Client
 }
 
 // NewClient returns a new client with required parameters.
-func NewClient(client client.Client, identity identityclient.APIClientGetter, region *region.Client) *Client {
+func NewClient(client client.Client, identity identityapi.ClientWithResponsesInterface, region *region.Client) *Client {
 	return &Client{
 		client:   client,
 		identity: identity,

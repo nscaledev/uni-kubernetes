@@ -61,6 +61,8 @@ monitor:
 
 # REST server specific configuration.
 server:
+  # An array of extra flags to append to the server configuration.
+  extraFlags: ~
   # Allows override of the global default image.
   image:
   # Allows resource limits to be set.
