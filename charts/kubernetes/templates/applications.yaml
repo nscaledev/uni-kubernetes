@@ -268,7 +268,7 @@ spec:
     - name: ingressController.loadbalancerMode
       value: 'dedicated'
     - name: ingressController.default
-      value: 'true'
+      value: 'false'
     - name: ingressController.enableProxyProtocol
       value: 'true'
 ---
