@@ -37,8 +37,8 @@ import (
 	"github.com/unikorn-cloud/core/pkg/provisioners/conditional"
 	"github.com/unikorn-cloud/core/pkg/provisioners/remotecluster"
 	"github.com/unikorn-cloud/core/pkg/provisioners/serial"
+	errorsv2 "github.com/unikorn-cloud/core/pkg/server/v2/errors"
 	"github.com/unikorn-cloud/core/pkg/util"
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
@@ -483,13 +483,12 @@ func (p *Provisioner) getFlavors(ctx context.Context, client regionapi.ClientWit
 		return nil, err
 	}
 
-	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+	data, err := coreapi.ParseJSONPointerResponse[regionapi.Flavors](resp.HTTPResponse.Header, resp.Body, resp.StatusCode(), http.StatusOK)
+	if err != nil {
+		return nil, err
 	}
 
-	flavors := *resp.JSON200
-
-	return flavors, nil
+	return *data, nil
 }
 
 func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.IdentityRead, error) {
@@ -500,23 +499,22 @@ func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWi
 		return nil, err
 	}
 
-	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
+	identity, err := coreapi.ParseJSONPointerResponse[regionapi.IdentityRead](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
+	if err != nil {
+		return nil, err
 	}
 
-	resource := response.JSON200
-
 	//nolint:exhaustive
-	switch resource.Metadata.ProvisioningStatus {
+	switch identity.Metadata.ProvisioningStatus {
 	case coreapi.ResourceProvisioningStatusProvisioned:
-		return resource, nil
+		return identity, nil
 	case coreapi.ResourceProvisioningStatusUnknown, coreapi.ResourceProvisioningStatusProvisioning:
 		log.Info("waiting for identity to become ready")
 
 		return nil, provisioners.ErrYield
 	}
 
-	return nil, fmt.Errorf("%w: unhandled status %s", ErrResourceDependency, resource.Metadata.ProvisioningStatus)
+	return nil, fmt.Errorf("%w: unhandled status %s", ErrResourceDependency, identity.Metadata.ProvisioningStatus)
 }
 
 func (p *Provisioner) deleteIdentity(ctx context.Context, client regionapi.ClientWithResponsesInterface) error {
@@ -525,15 +523,14 @@ func (p *Provisioner) deleteIdentity(ctx context.Context, client regionapi.Clien
 		return err
 	}
 
-	statusCode := response.StatusCode()
-
-	// An accepted status means the API has recoded the deletion event and
-	// we can delete the cluster, a not found means it's been deleted already
-	// and again can proceed.  The goal here is not to leak resources.
-	if statusCode != http.StatusAccepted && statusCode != http.StatusNotFound {
-		return coreapiutils.ExtractError(response.StatusCode(), response)
+	err = coreapi.AssertResponseStatus(response.HTTPResponse.Header, response.StatusCode(), http.StatusAccepted)
+	if err != nil && !errorsv2.IsAPIResourceMissingError(err) {
+		return err
 	}
 
+	// An accepted status means the API has recoded the deletion event, and
+	// we can delete the cluster, a not found means it's been deleted already
+	// and again can proceed.  The goal here is not to leak resources.
 	return nil
 }
 
@@ -551,23 +548,22 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 		return nil, err
 	}
 
-	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
+	network, err := coreapi.ParseJSONPointerResponse[regionapi.NetworkRead](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
+	if err != nil {
+		return nil, err
 	}
 
-	resource := response.JSON200
-
 	//nolint:exhaustive
-	switch resource.Metadata.ProvisioningStatus {
+	switch network.Metadata.ProvisioningStatus {
 	case coreapi.ResourceProvisioningStatusProvisioned:
-		return resource, nil
+		return network, nil
 	case coreapi.ResourceProvisioningStatusUnknown, coreapi.ResourceProvisioningStatusProvisioning:
 		log.Info("waiting for physical network to become ready")
 
 		return nil, provisioners.ErrYield
 	}
 
-	return nil, fmt.Errorf("%w: unhandled status %s", ErrResourceDependency, resource.Metadata.ProvisioningStatus)
+	return nil, fmt.Errorf("%w: unhandled status %s", ErrResourceDependency, network.Metadata.ProvisioningStatus)
 }
 
 func (p *Provisioner) getExternalNetwork(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.ExternalNetwork, error) {
@@ -576,14 +572,18 @@ func (p *Provisioner) getExternalNetwork(ctx context.Context, client regionapi.C
 		return nil, err
 	}
 
-	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
+	data, err := coreapi.ParseJSONPointerResponse[regionapi.ExternalNetworks](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
+	if err != nil {
+		return nil, err
 	}
 
-	externalNetworks := *response.JSON200
-
+	externalNetworks := *data
 	if len(externalNetworks) == 0 {
-		return nil, fmt.Errorf("%w: no external networks available", ErrResourceDependency)
+		err = errorsv2.NewInternalError().
+			WithSimpleCause("no external networks found").
+			Prefixed()
+
+		return nil, err
 	}
 
 	// NOTE: this relies on the region API enforcing ordering constraints so the selection

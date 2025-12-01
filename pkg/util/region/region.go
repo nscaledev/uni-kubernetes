@@ -24,7 +24,7 @@ import (
 	"net/http"
 
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
+	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
@@ -35,9 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	ErrResourceDependency = errors.New("resource dependency error")
-)
+var ErrResourceDependency = errors.New("resource dependency error")
 
 // ControllerClient creates a new authenticated client and context for use against the region service.
 func ControllerClient(ctx context.Context, cli client.Client, httpOptions *coreclient.HTTPClientOptions, identityOptions *identityclient.Options, regionOptions *regionclient.Options, traceName string, resource metav1.Object) (context.Context, regionapi.ClientWithResponsesInterface, error) {
@@ -65,11 +63,7 @@ func Region(ctx context.Context, client regionapi.ClientWithResponsesInterface, 
 		return nil, err
 	}
 
-	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
-	}
-
-	return response.JSON200, nil
+	return coreapi.ParseJSONPointerResponse[regionapi.RegionDetailRead](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusOK)
 }
 
 // Kubeconfig returns the region's Kubernetes config.

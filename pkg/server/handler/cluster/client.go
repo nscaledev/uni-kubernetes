@@ -19,8 +19,6 @@ package cluster
 
 import (
 	"context"
-	goerrors "errors"
-	"fmt"
 	"net"
 	"net/http"
 	"slices"
@@ -31,9 +29,8 @@ import (
 	"github.com/unikorn-cloud/core/pkg/constants"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
-	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
+	errorsv2 "github.com/unikorn-cloud/core/pkg/server/v2/errors"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
@@ -49,14 +46,9 @@ import (
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/utils/ptr"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-)
-
-var (
-	ErrConsistency = goerrors.New("consistency error")
 )
 
 type Options struct {
@@ -110,54 +102,65 @@ func NewClient(client client.Client, options *Options, identity identityclient.A
 
 // List returns all clusters owned by the implicit control plane.
 func (c *Client) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDClustersParams) (openapi.KubernetesClusters, error) {
-	result := &unikornv1.KubernetesClusterList{}
-
-	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
-	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
-	}
-
-	selector := labels.NewSelector()
-	selector = selector.Add(*requirement)
-
-	options := &client.ListOptions{
-		LabelSelector: selector,
-	}
-
-	if err := c.client.List(ctx, result, options); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
-	}
-
 	tagSelector, err := coreutil.DecodeTagSelectorParam(params.Tag)
 	if err != nil {
 		return nil, err
 	}
 
-	result.Items = slices.DeleteFunc(result.Items, func(resource unikornv1.KubernetesCluster) bool {
+	opts := []client.ListOption{
+		&client.ListOptions{
+			LabelSelector: labels.SelectorFromSet(labels.Set{
+				constants.OrganizationLabel: organizationID,
+			}),
+		},
+	}
+
+	var list unikornv1.KubernetesClusterList
+	if err := c.client.List(ctx, &list, opts...); err != nil {
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve kubernetes clusters: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	list.Items = slices.DeleteFunc(list.Items, func(resource unikornv1.KubernetesCluster) bool {
 		return !resource.Spec.Tags.ContainsAll(tagSelector)
 	})
 
-	slices.SortStableFunc(result.Items, unikornv1.CompareKubernetesCluster)
+	slices.SortStableFunc(list.Items, unikornv1.CompareKubernetesCluster)
 
-	return convertList(result), nil
+	return convertList(&list), nil
 }
 
 // get returns the cluster.
 func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikornv1.KubernetesCluster, error) {
-	result := &unikornv1.KubernetesCluster{}
-
-	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterID}, result); err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil, errors.HTTPNotFound().WithError(err)
-		}
-
-		return nil, errors.OAuth2ServerError("unable to get cluster").WithError(err)
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      clusterID,
 	}
 
-	return result, nil
+	var cluster unikornv1.KubernetesCluster
+	if err := c.client.Get(ctx, key, &cluster); err != nil {
+		if kerrors.IsNotFound(err) {
+			err = errorsv2.NewResourceMissingError("kubernetes cluster").
+				WithCause(err).
+				Prefixed()
+
+			return nil, err
+		}
+
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve kubernetes cluster: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	return &cluster, nil
 }
 
-// GetKubeconfig returns the kubernetes configuation associated with a cluster.
+// GetKubeconfig returns the kubernetes configuration associated with a cluster.
 func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, clusterID string) ([]byte, error) {
 	project, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
@@ -179,29 +182,44 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 
 	vc := vcluster.NewControllerRuntimeClient()
 
-	vclusterConfig, err := vc.RESTConfig(ctx, project.Name, cluster.Spec.ClusterManagerID, false)
+	vClusterConfig, err := vc.RESTConfig(ctx, project.Name, cluster.Spec.ClusterManagerID, false)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to get control plane rest config").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve vCluster rest config: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
-	vclusterClient, err := client.New(vclusterConfig, client.Options{})
+	vClusterClient, err := client.New(vClusterConfig, client.Options{})
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to get control plane client").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to create vCluster client: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
-	objectKey := client.ObjectKey{
+	key := client.ObjectKey{
 		Namespace: clusterID,
 		Name:      clusteropenstack.KubeconfigSecretName(cluster),
 	}
 
-	secret := &corev1.Secret{}
-
-	if err := vclusterClient.Get(ctx, objectKey, secret); err != nil {
+	var secret corev1.Secret
+	if err := vClusterClient.Get(ctx, key, &secret); err != nil {
 		if kerrors.IsNotFound(err) {
-			return nil, errors.HTTPNotFound().WithError(err)
+			err = errorsv2.NewResourceMissingError("v-cluster").
+				WithCause(err).
+				Prefixed()
+
+			return nil, err
 		}
 
-		return nil, errors.OAuth2ServerError("unable to get cluster configuration").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve v-cluster: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	return secret.Data["value"], nil
@@ -235,13 +253,18 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 		serversCommitted += serversMinimum
 		serversReserved += reserved
 
-		flavorByID := func(f regionapi.Flavor) bool {
+		isTargetFlavor := func(f regionapi.Flavor) bool {
 			return f.Metadata.Id == pool.FlavorID
 		}
 
-		index := slices.IndexFunc(flavors, flavorByID)
+		index := slices.IndexFunc(flavors, isTargetFlavor)
 		if index < 0 {
-			return nil, fmt.Errorf("%w: flavorID does not exist", ErrConsistency)
+			err = errorsv2.NewInvalidRequestError().
+				WithSimpleCause("no matching flavor found when generating allocations").
+				WithErrorDescription("One of the specified flavor IDs is invalid or cannot be resolved.").
+				Prefixed()
+
+			return nil, err
 		}
 
 		flavor := flavors[index]
@@ -292,21 +315,21 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 		},
 	}
 
-	client, err := c.region.Client(ctx)
+	regionAPIClient, err := c.region.Client(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
+		return nil, err
 	}
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
+	response, err := regionAPIClient.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to create identity").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to create identity: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
-	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create identity").WithError(coreapiutils.ExtractError(resp.StatusCode(), resp))
-	}
-
-	return resp.JSON201, nil
+	return coreapi.ParseJSONPointerResponse[regionapi.IdentityRead](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusCreated)
 }
 
 func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizationID, projectID string, cluster *unikornv1.KubernetesCluster, identity *regionapi.IdentityRead) (*regionapi.NetworkRead, error) {
@@ -335,21 +358,21 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 		},
 	}
 
-	client, err := c.region.Client(ctx)
+	regionAPIClient, err := c.region.Client(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to create region client").WithError(err)
+		return nil, err
 	}
 
-	resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
+	response, err := regionAPIClient.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to physical network").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to create network: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
-	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create physical network").WithError(coreapiutils.ExtractError(resp.StatusCode(), resp))
-	}
-
-	return resp.JSON201, nil
+	return coreapi.ParseJSONPointerResponse[regionapi.NetworkRead](response.HTTPResponse.Header, response.Body, response.StatusCode(), http.StatusCreated)
 }
 
 func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, identity *regionapi.IdentityRead, cluster *unikornv1.KubernetesCluster) error {
@@ -368,13 +391,13 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 
 	// Provision a vlan physical network for bare-metal nodes to attach to.
 	// For now, do this for everything, given you may start with a VM only cluster
-	// and suddely want some baremetal nodes.  CAPO won't allow you to change
+	// and suddenly want some bare metal nodes.  CAPO won't allow you to change
 	// networks, so play it safe.  Please note that the cluster controller will
 	// automatically discover the physical network, so we don't need an annotation.
 	if region.Spec.Features.PhysicalNetworks {
 		physicalNetwork, err := c.createPhysicalNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
 		if err != nil {
-			return errors.OAuth2ServerError("failed to create physical network").WithError(err)
+			return err
 		}
 
 		cluster.Annotations[constants.PhysicalNetworkAnnotation] = physicalNetwork.Metadata.Id
@@ -421,17 +444,29 @@ type appBundleListerPlus interface {
 }
 
 func (c *Client) getClusterManager(ctx context.Context, namespace string, request *openapi.KubernetesClusterWrite) (*unikornv1.ClusterManager, error) {
-	clusterManager := &unikornv1.ClusterManager{}
-
-	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: *request.Spec.ClusterManagerId}, clusterManager); err != nil {
-		if kerrors.IsNotFound(err) {
-			return nil, errors.OAuth2InvalidRequest("requested cluster manager does not exist").WithError(err)
-		}
-
-		return nil, errors.OAuth2ServerError("cluster manager get failed").WithError(err)
+	key := client.ObjectKey{
+		Namespace: namespace,
+		Name:      *request.Spec.ClusterManagerId,
 	}
 
-	return clusterManager, nil
+	var manager unikornv1.ClusterManager
+	if err := c.client.Get(ctx, key, &manager); err != nil {
+		if kerrors.IsNotFound(err) {
+			err = errorsv2.NewResourceMissingError("cluster manager").
+				WithCause(err).
+				Prefixed()
+
+			return nil, err
+		}
+
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to retrieve cluster manager: %w", err).
+			Prefixed()
+
+		return nil, err
+	}
+
+	return &manager, nil
 }
 
 func (c *Client) getOrCreateClusterManager(ctx context.Context, appclient appBundleListerPlus, organizationID, projectID string, namespace string, request *openapi.KubernetesClusterWrite) (*unikornv1.ClusterManager, error) {
@@ -468,7 +503,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 
 	allocations, err := c.generateAllocations(ctx, organizationID, cluster)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return nil, err
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Create(ctx, cluster, allocations); err != nil {
@@ -485,7 +520,11 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 	}
 
 	if err := c.client.Create(ctx, cluster); err != nil {
-		return nil, errors.OAuth2ServerError("failed to create cluster").WithError(err)
+		err = errorsv2.NewInternalError().
+			WithCausef("failed to create kubernetes cluster: %w", err).
+			Prefixed()
+
+		return nil, err
 	}
 
 	return convert(cluster), nil
@@ -509,10 +548,14 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 
 	if err := c.client.Delete(ctx, cluster); err != nil {
 		if kerrors.IsNotFound(err) {
-			return errors.HTTPNotFound().WithError(err)
+			return errorsv2.NewResourceMissingError("kubernetes cluster").
+				WithCause(err).
+				Prefixed()
 		}
 
-		return errors.OAuth2ServerError("failed to delete cluster").WithError(err)
+		return errorsv2.NewInternalError().
+			WithCausef("failed to delete kubernetes cluster: %w", err).
+			Prefixed()
 	}
 
 	return nil
@@ -526,7 +569,10 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if namespace.DeletionTimestamp != nil {
-		return errors.OAuth2InvalidRequest("control plane is being deleted")
+		return errorsv2.NewConflictError().
+			WithSimpleCause("kubernetes cluster is being deleted").
+			WithErrorDescription("The kubernetes cluster is being deleted and cannot be modified.").
+			Prefixed()
 	}
 
 	current, err := c.get(ctx, namespace.Name, clusterID)
@@ -545,7 +591,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator, metadataMutator); err != nil {
-		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
+		return err
 	}
 
 	// Preserve networking options as if they change it'll be fairly catastrophic.
@@ -560,7 +606,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 
 	allocations, err := c.generateAllocations(ctx, organizationID, updated)
 	if err != nil {
-		return errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return err
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Update(ctx, updated, allocations); err != nil {
@@ -568,7 +614,9 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
-		return errors.OAuth2ServerError("failed to patch cluster").WithError(err)
+		return errorsv2.NewInternalError().
+			WithCausef("failed to patch kubernetes cluster: %w", err).
+			Prefixed()
 	}
 
 	return nil
