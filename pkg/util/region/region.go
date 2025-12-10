@@ -41,16 +41,11 @@ var (
 
 // ControllerClient creates a new authenticated client and context for use against the region service.
 func ControllerClient(ctx context.Context, cli client.Client, httpOptions *coreclient.HTTPClientOptions, identityOptions *identityclient.Options, regionOptions *regionclient.Options, traceName string, resource metav1.Object) (context.Context, regionapi.ClientWithResponsesInterface, error) {
-	tokenIssuer := identityclient.NewTokenIssuer(cli, identityOptions, httpOptions, constants.ServiceDescriptor())
-
-	token, err := tokenIssuer.Issue(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	issuer := identityclient.NewTokenIssuer(cli, identityOptions, httpOptions, constants.ServiceDescriptor())
 
 	getter := regionclient.New(cli, regionOptions, httpOptions)
 
-	client, err := getter.ControllerClient(ctx, token, resource)
+	client, err := getter.ControllerClient(ctx, issuer, resource)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -74,7 +69,7 @@ func Region(ctx context.Context, client regionapi.ClientWithResponsesInterface, 
 
 // Kubeconfig returns the region's Kubernetes config.
 func Kubeconfig(region *regionapi.RegionDetailRead) ([]byte, error) {
-	if region.Spec.Type != regionapi.Kubernetes {
+	if region.Spec.Type != regionapi.RegionTypeKubernetes {
 		return nil, fmt.Errorf("%w: requested region of incorrect type", ErrResourceDependency)
 	}
 

@@ -200,9 +200,9 @@ func (p *Provisioner) generateWorkloadPoolSchedulerHelmValues(pool *unikornv1.Ku
 		var t string
 
 		switch flavor.Spec.Gpu.Vendor {
-		case regionapi.NVIDIA:
+		case regionapi.GpuVendorNVIDIA:
 			t = "nvidia.com/gpu"
-		case regionapi.AMD:
+		case regionapi.GpuVendorAMD:
 			t = "amd.com/gpu"
 		default:
 			return nil, fmt.Errorf("%w: unhandled gpu vendor case %s", ErrReference, flavor.Spec.Gpu.Vendor)
