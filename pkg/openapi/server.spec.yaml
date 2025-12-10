@@ -15,6 +15,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/regionTypeParameter'
     get:
+      x-hidden: true
       description: |-
         Lists a curated set of regions.
       security:
@@ -35,6 +36,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/regionIDParameter'
     get:
+      x-hidden: true
       description: |-
         Lists all Kubernetes compatible flavors that the user has access to.
       security:
@@ -55,6 +57,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/regionIDParameter'
     get:
+      x-hidden: true
       description: |-
         Lists all Kubernetes compatible images that the user has access to.
       security:
@@ -78,6 +81,7 @@ paths:
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
     get:
+      x-hidden: true
       description: |-
         Lists cluster managers within the organization.
       security:
@@ -106,6 +110,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/projectIDParameter'
     post:
+      x-hidden: true
       description: |-
         Creates a new cluster manager within the project.
       security:
@@ -137,6 +142,7 @@ paths:
     - $ref: '#/components/parameters/projectIDParameter'
     - $ref: '#/components/parameters/clusterManagerIDParameter'
     put:
+      x-hidden: true
       description: |-
         Updates a cluster manager within the scoped project.
       security:
@@ -157,6 +163,7 @@ paths:
         '500':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
     delete:
+      x-hidden: true
       description: |-
         Deletes a cluster manager from within the scoped project.
         This is a cascading operation and will delete all managed clusters.
@@ -181,6 +188,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/parameters/tagSelectorParameter'
     get:
+      x-hidden: true
       description: |-
         List all clusters within the organization.
       security:
@@ -204,6 +212,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/projectIDParameter'
     post:
+      x-hidden: true
       description: |-
         Creates a new cluster.
       security:
@@ -230,6 +239,7 @@ paths:
     - $ref: '#/components/parameters/projectIDParameter'
     - $ref: '#/components/parameters/clusterIDParameter'
     put:
+      x-hidden: true
       description: |-
         Update a cluster.
       security:
@@ -250,6 +260,7 @@ paths:
         '500':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
     delete:
+      x-hidden: true
       description: |-
         Delete a cluster.
       security:
@@ -274,6 +285,7 @@ paths:
     - $ref: '#/components/parameters/projectIDParameter'
     - $ref: '#/components/parameters/clusterIDParameter'
     get:
+      x-hidden: true
       description: |-
         Get a cluster's Kubernetes configuration.
       security:
@@ -297,6 +309,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/parameters/tagSelectorParameter'
     get:
+      x-hidden: true
       description: |-
         List all virtual clusters within the organization.
       security:
@@ -320,6 +333,7 @@ paths:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/projectIDParameter'
     post:
+      x-hidden: true
       description: |-
         Creates a new virtual cluster.
       security:
@@ -346,6 +360,7 @@ paths:
     - $ref: '#/components/parameters/projectIDParameter'
     - $ref: '#/components/parameters/clusterIDParameter'
     put:
+      x-hidden: true
       description: |-
         Update a virtual cluster.
       security:
@@ -366,6 +381,7 @@ paths:
         '500':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/internalServerErrorResponse'
     delete:
+      x-hidden: true
       description: |-
         Delete a virtual cluster.
       security:
@@ -390,6 +406,7 @@ paths:
     - $ref: '#/components/parameters/projectIDParameter'
     - $ref: '#/components/parameters/clusterIDParameter'
     get:
+      x-hidden: true
       description: |-
         Get a virtual cluster's Kubernetes configuration.
       security:
