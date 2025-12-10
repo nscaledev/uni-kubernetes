@@ -50,6 +50,11 @@ func main() {
 		path := spec.Paths.Find(pathName)
 
 		for method, operation := range path.Operations() {
+			if operation.Summary == "" && operation.Extensions["x-hidden"] == nil {
+				report("no summary provided for ", method, pathName)
+				os.Exit(1)
+			}
+
 			// Everything needs security defining.
 			_, noSecurityAllowed := operation.Extensions["x-no-security-requirements"]
 
