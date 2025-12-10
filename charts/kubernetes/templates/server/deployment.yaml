@@ -24,6 +24,9 @@ spec:
         {{- include "unikorn.identity.flags" . | nindent 8 }}
         {{- include "unikorn.region.flags" . | nindent 8 }}
         {{- include "unikorn.mtls.flags" . | nindent 8 }}
+        {{- range $i, $arg := .Values.server.extraFlags }}
+        - {{ $arg }}
+        {{- end }}
         ports:
         - name: http
           containerPort: 6080

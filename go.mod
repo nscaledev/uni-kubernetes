@@ -11,11 +11,11 @@ require (
 	github.com/gophercloud/utils v0.0.0-20231010081019-80377eca5d56
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/prometheus/client_golang v1.22.0
-	github.com/spf13/pflag v1.0.6
-	github.com/stretchr/testify v1.10.0
-	github.com/unikorn-cloud/core v1.11.0
-	github.com/unikorn-cloud/identity v1.11.0
-	github.com/unikorn-cloud/region v1.11.0
+	github.com/spf13/pflag v1.0.10
+	github.com/stretchr/testify v1.11.1
+	github.com/unikorn-cloud/core v1.11.1-0.20251209154055-f40c79722347
+	github.com/unikorn-cloud/identity v1.11.1-0.20251210103822-d8584c983def
+	github.com/unikorn-cloud/region v1.11.1-0.20251210123010-db49a7980f9c
 	go.opentelemetry.io/otel/sdk v1.35.0
 	go.uber.org/mock v0.5.2
 	gopkg.in/ini.v1 v1.67.0

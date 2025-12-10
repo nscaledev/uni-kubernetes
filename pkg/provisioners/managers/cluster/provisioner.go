@@ -243,12 +243,9 @@ func (p *Provisioner) identityClient(ctx context.Context) (identityapi.ClientWit
 		return nil, err
 	}
 
-	token, err := identityclient.NewTokenIssuer(client, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor()).Issue(ctx)
-	if err != nil {
-		return nil, err
-	}
+	issuer := identityclient.NewTokenIssuer(client, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor())
 
-	return identityclient.New(client, p.options.identityOptions, &p.options.clientOptions).ControllerClient(ctx, token, &p.cluster)
+	return identityclient.New(client, p.options.identityOptions, &p.options.clientOptions).ControllerClient(ctx, issuer, &p.cluster)
 }
 
 // getClusterManager gets the control plane object that owns this cluster.
@@ -307,9 +304,9 @@ func (p *Provisioner) getProvisionerOptions(options *kubernetesprovisioners.Clus
 
 		if flavor.Spec.Gpu != nil {
 			switch flavor.Spec.Gpu.Vendor {
-			case regionapi.NVIDIA:
+			case regionapi.GpuVendorNVIDIA:
 				provisionerOptions.gpuVendorNvidia = true
-			case regionapi.AMD:
+			case regionapi.GpuVendorAMD:
 				provisionerOptions.gpuVendorAMD = true
 			default:
 				return nil, fmt.Errorf("%w: unhandled GPU vendor %v", ErrResourceDependency, flavor.Spec.Gpu.Vendor)
@@ -460,16 +457,11 @@ func (p *Provisioner) getRegionClient(ctx context.Context) (context.Context, reg
 		return nil, nil, err
 	}
 
-	tokenIssuer := identityclient.NewTokenIssuer(cli, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor())
-
-	token, err := tokenIssuer.Issue(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	issuer := identityclient.NewTokenIssuer(cli, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor())
 
 	getter := regionclient.New(cli, p.options.regionOptions, &p.options.clientOptions)
 
-	client, err := getter.ControllerClient(ctx, token, &p.cluster)
+	client, err := getter.ControllerClient(ctx, issuer, &p.cluster)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -697,7 +689,12 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 		return err
 	}
 
-	if err := identityclient.NewAllocations(cli, p.identityClient).Delete(ctx, &p.cluster); err != nil {
+	identity, err := p.identityClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := identityclient.NewAllocations(cli, identity).Delete(ctx, &p.cluster); err != nil {
 		return err
 	}
 
