@@ -50,9 +50,14 @@ func main() {
 		path := spec.Paths.Find(pathName)
 
 		for method, operation := range path.Operations() {
-			if operation.Summary == "" && operation.Extensions["x-hidden"] == nil {
-				report("no summary provided for ", method, pathName)
-				os.Exit(1)
+			if operation.Extensions["x-hidden"] == nil {
+				if operation.Summary == "" {
+					report("no summary provided for ", method, pathName)
+				}
+
+				if len(operation.Tags) == 0 {
+					report("no tag grouping provided for ", method, pathName)
+				}
 			}
 
 			// Everything needs security defining.
@@ -60,13 +65,11 @@ func main() {
 
 			if operation.Security == nil && !noSecurityAllowed {
 				report("no security requirements set for ", method, pathName)
-				os.Exit(1)
 			}
 
 			// If you have multiple, then the errors become ambiguous to handle.
 			if operation.Security != nil && len(*operation.Security) != 1 {
 				report("security requirement for", method, pathName, "require one security requirement")
-				os.Exit(1)
 			}
 
 			//nolint:nestif
