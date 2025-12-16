@@ -266,11 +266,15 @@ spec:
     - name: ingressController.enabled
       value: 'true'
     - name: ingressController.loadbalancerMode
-      value: 'dedicated'
+      value: 'shared'
     - name: ingressController.default
       value: 'false'
     - name: ingressController.enableProxyProtocol
       value: 'true'
+    - name: gatewayAPI.enableProxyProtocol
+      value: 'true'
+    - name: ingressController.service.annotations.loadbalancer\.openstack\.org/proxy-protocol
+      value: '"true"'
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
