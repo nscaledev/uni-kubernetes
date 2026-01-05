@@ -43,7 +43,6 @@ import (
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
-	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	kubernetesprovisioners "github.com/unikorn-cloud/kubernetes/pkg/provisioners"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/amdgpuoperator"
@@ -244,9 +243,7 @@ func (p *Provisioner) identityClient(ctx context.Context) (identityapi.ClientWit
 		return nil, err
 	}
 
-	issuer := identityclient.NewTokenIssuer(client, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor())
-
-	return identityclient.New(client, p.options.identityOptions, &p.options.clientOptions).ControllerClient(ctx, issuer, &p.cluster)
+	return identityclient.New(client, p.options.identityOptions, &p.options.clientOptions).ControllerClient(ctx, &p.cluster)
 }
 
 // getClusterManager gets the control plane object that owns this cluster.
@@ -458,11 +455,9 @@ func (p *Provisioner) getRegionClient(ctx context.Context) (context.Context, reg
 		return nil, nil, err
 	}
 
-	issuer := identityclient.NewTokenIssuer(cli, p.options.identityOptions, &p.options.clientOptions, constants.ServiceDescriptor())
-
 	getter := regionclient.New(cli, p.options.regionOptions, &p.options.clientOptions)
 
-	client, err := getter.ControllerClient(ctx, issuer, &p.cluster)
+	client, err := getter.ControllerClient(ctx, &p.cluster)
 	if err != nil {
 		return nil, nil, err
 	}
