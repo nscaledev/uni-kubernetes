@@ -153,16 +153,12 @@ func (s *Server) GetServer(client client.Client) (*http.Server, error) {
 		},
 	}
 
-	// NOTE: any clients that are used, must issue new tokens as this service to
-	// prevent the user having to be granted excessive privilege.
-	issuer := identityclient.NewTokenIssuer(client, s.IdentityOptions, &s.ClientOptions, constants.ServiceDescriptor())
-
-	identity, err := identityclient.New(client, s.IdentityOptions, &s.ClientOptions).APIClient(context.TODO(), issuer)
+	identity, err := identityclient.New(client, s.IdentityOptions, &s.ClientOptions).APIClient(context.TODO())
 	if err != nil {
 		return nil, err
 	}
 
-	region, err := regionclient.New(client, s.RegionOptions, &s.ClientOptions).APIClient(context.TODO(), issuer)
+	region, err := regionclient.New(client, s.RegionOptions, &s.ClientOptions).APIClient(context.TODO())
 	if err != nil {
 		return nil, err
 	}
