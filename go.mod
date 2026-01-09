@@ -15,7 +15,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/unikorn-cloud/core v1.13.0-rc1.0.20260106153539-4cae39a4fb7b
 	github.com/unikorn-cloud/identity v1.13.0-rc1.0.20260108150814-395a30be5650
-	github.com/unikorn-cloud/region v1.13.0-rc1.0.20260109100148-cfe92673fde1
+	github.com/unikorn-cloud/region v1.13.0-rc1.0.20260109124831-a757f8e0b5a4
 	go.opentelemetry.io/otel/sdk v1.35.0
 	go.uber.org/mock v0.5.2
 	gopkg.in/ini.v1 v1.67.0
