@@ -188,7 +188,7 @@ lint: $(GENDIR)
 # Validate the server OpenAPI schema is legit.
 .PHONY: validate
 validate: $(OPENAPI_FILES)
-	go run ./hack/validate_openapi
+	go run github.com/unikorn-cloud/core/hack/validate_openapi
 
 # Validate the docs can be generated without fail.
 .PHONY: validate-docs
