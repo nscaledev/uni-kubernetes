@@ -5,7 +5,7 @@ go 1.24.2
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/getkin/kin-openapi v0.132.0
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.4
 	github.com/go-logr/logr v1.4.2
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/utils v0.0.0-20231010081019-80377eca5d56
@@ -13,10 +13,9 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	github.com/unikorn-cloud/core v1.12.0
-	github.com/unikorn-cloud/identity v1.12.0
-	github.com/unikorn-cloud/region v1.12.0
-	go.opentelemetry.io/otel/sdk v1.35.0
+	github.com/unikorn-cloud/core v1.13.1-0.20260127150215-6c9e7fe90056
+	github.com/unikorn-cloud/identity v1.13.1-0.20260128113817-e2a2a05feed5
+	github.com/unikorn-cloud/region v1.13.1-0.20260128114756-a3c30823cd9f
 	go.uber.org/mock v0.5.2
 	gopkg.in/ini.v1 v1.67.0
 	k8s.io/api v0.33.1
@@ -57,7 +56,6 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gophercloud/gophercloud v1.14.1 // indirect
-	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
@@ -91,6 +89,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.35.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.35.0 // indirect
 	go.opentelemetry.io/otel/metric v1.35.0 // indirect
+	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
 	go.opentelemetry.io/otel/trace v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect

@@ -1,5 +1,6 @@
 /*
 Copyright 2025 the Unikorn Authors.
+Copyright 2026 Nscale.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -56,12 +57,12 @@ func (c *Client) HTTPClient(ctx context.Context) (*http.Client, error) {
 }
 
 // APIClient returns a new OpenAPI client that can be used to access the API from another API.
-func (c *Client) APIClient(ctx context.Context, accessToken baseclient.AccessTokenGetter) (*openapi.ClientWithResponses, error) {
-	return baseclient.APIClient(ctx, c.base, openapi.NewBuilder(), accessToken)
+func (c *Client) APIClient(ctx context.Context) (*openapi.ClientWithResponses, error) {
+	return baseclient.APIClient(ctx, c.base, openapi.NewBuilder())
 }
 
 // ControllerClient returns a new OpenAPI client that can be used to access the API from another
 // controller.  It requires a resource that stores the identity principal information.
-func (c *Client) ControllerClient(ctx context.Context, accessToken baseclient.AccessTokenGetter, resource metav1.Object) (*openapi.ClientWithResponses, error) {
-	return baseclient.ControllerClient(ctx, c.base, openapi.NewBuilder(), accessToken, resource)
+func (c *Client) ControllerClient(ctx context.Context, resource metav1.Object) (*openapi.ClientWithResponses, error) {
+	return baseclient.ControllerClient(ctx, c.base, openapi.NewBuilder(), resource)
 }

@@ -1,5 +1,6 @@
 /*
 Copyright 2025 the Unikorn Authors.
+Copyright 2026 Nscale.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -26,7 +27,6 @@ import (
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
-	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
@@ -41,11 +41,9 @@ var (
 
 // ControllerClient creates a new authenticated client and context for use against the region service.
 func ControllerClient(ctx context.Context, cli client.Client, httpOptions *coreclient.HTTPClientOptions, identityOptions *identityclient.Options, regionOptions *regionclient.Options, traceName string, resource metav1.Object) (context.Context, regionapi.ClientWithResponsesInterface, error) {
-	issuer := identityclient.NewTokenIssuer(cli, identityOptions, httpOptions, constants.ServiceDescriptor())
-
 	getter := regionclient.New(cli, regionOptions, httpOptions)
 
-	client, err := getter.ControllerClient(ctx, issuer, resource)
+	client, err := getter.ControllerClient(ctx, resource)
 	if err != nil {
 		return nil, nil, err
 	}
