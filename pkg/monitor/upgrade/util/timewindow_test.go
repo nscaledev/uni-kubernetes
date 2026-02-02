@@ -277,7 +277,7 @@ func TestWeekdayOverflow(t *testing.T) {
 
 	ctx := testContext(t)
 	now := time.Now().UTC()
-	upgrader := newWeekDayUpgrader(now.Weekday()-1, now.Hour()+3, now.Hour()+2)
+	upgrader := newWeekDayUpgrader((now.Weekday()+6)%7, now.Hour()+3, now.Hour()+2)
 	window := util.TimeWindowFromResource(ctx, upgrader)
 
 	if !validToday(t, window) && !validYesterday(t, window) {
