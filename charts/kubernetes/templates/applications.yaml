@@ -246,6 +246,35 @@ spec:
       value: 'true'
     - name: gatewayAPI.enabled
       value: 'true'
+  - version: 1.18.4
+    repo: https://helm.cilium.io
+    chart: cilium
+    namespace: kube-system
+    parameters:
+    - name: hubble.relay.enabled
+      value: 'true'
+    - name: hubble.ui.enabled
+      value: 'true'
+    - name: operator.setNodeTaints
+      value: 'false'
+    - name: envoy.enabled
+      value: 'false'
+    - name: bpf.lbExternalClusterIP
+      value: 'true'
+    - name: gatewayAPI.enabled
+      value: 'true'
+    - name: ingressController.enabled
+      value: 'true'
+    - name: ingressController.loadbalancerMode
+      value: 'shared'
+    - name: ingressController.default
+      value: 'false'
+    - name: ingressController.enableProxyProtocol
+      value: 'true'
+    - name: gatewayAPI.enableProxyProtocol
+      value: 'true'
+    - name: ingressController.service.annotations.loadbalancer\.openstack\.org/proxy-protocol
+      value: '"true"'
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
