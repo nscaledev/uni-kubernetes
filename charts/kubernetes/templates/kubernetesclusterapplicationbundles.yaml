@@ -1,242 +1,3 @@
-apiVersion: unikorn-cloud.org/v1alpha1
-kind: KubernetesClusterApplicationBundle
-metadata:
-  name: kubernetes-cluster-1.0.0
-  labels:
-    {{- include "unikorn.labels" . | nindent 4 }}
-spec:
-  version: 1.0.0
-  applications:
-  - name: cluster-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-openstack" }}
-      version: v0.5.6
-  - name: cilium
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cilium" }}
-      version: 1.16.6
-  - name: openstack-cloud-provider
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-cloud-provider" }}
-      version: 2.31.1
-  - name: openstack-plugin-cinder-csi
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-plugin-cinder-csi" }}
-      version: 2.31.1
-  - name: metrics-server
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "metrics-server" }}
-      version: 3.12.1
-  - name: nvidia-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "nvidia-gpu-operator" }}
-      version: v23.9.1
-  - name: cert-manager
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cert-manager" }}
-      version: v1.17.1
-  - name: amd-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "amd-gpu-operator" }}
-      version: 0.13.0
-  - name: cluster-autoscaler
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler" }}
-      version: 9.29.3
-  - name: cluster-autoscaler-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler-openstack" }}
-      version: v0.1.0
----
-apiVersion: unikorn-cloud.org/v1alpha1
-kind: KubernetesClusterApplicationBundle
-metadata:
-  name: kubernetes-cluster-1.1.0
-  labels:
-    {{- include "unikorn.labels" . | nindent 4 }}
-spec:
-  version: 1.1.0
-  applications:
-  - name: cluster-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-openstack" }}
-      version: v0.5.6
-  - name: cilium
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cilium" }}
-      version: 1.18.0-pre.0
-  - name: openstack-cloud-provider
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-cloud-provider" }}
-      version: 2.32.0
-  - name: openstack-plugin-cinder-csi
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-plugin-cinder-csi" }}
-      version: 2.32.0
-  - name: metrics-server
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "metrics-server" }}
-      version: 3.12.2
-  - name: nvidia-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "nvidia-gpu-operator" }}
-      version: v23.9.1
-  - name: cert-manager
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cert-manager" }}
-      version: v1.17.1
-  - name: amd-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "amd-gpu-operator" }}
-      version: v1.2.0
-  - name: cluster-autoscaler
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler" }}
-      version: 9.29.3
-  - name: cluster-autoscaler-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler-openstack" }}
-      version: v0.1.0
----
-apiVersion: unikorn-cloud.org/v1alpha1
-kind: KubernetesClusterApplicationBundle
-metadata:
-  name: kubernetes-cluster-1.2.0
-  labels:
-    {{- include "unikorn.labels" . | nindent 4 }}
-spec:
-  version: 1.2.0
-  applications:
-  - name: cluster-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-openstack" }}
-      version: v0.6.0
-  - name: cilium
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cilium" }}
-      version: 1.18.0-pre.0
-  - name: openstack-cloud-provider
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-cloud-provider" }}
-      version: 2.32.0
-  - name: openstack-plugin-cinder-csi
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-plugin-cinder-csi" }}
-      version: 2.32.0
-  - name: metrics-server
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "metrics-server" }}
-      version: 3.12.2
-  - name: nvidia-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "nvidia-gpu-operator" }}
-      version: v23.9.1
-  - name: cert-manager
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cert-manager" }}
-      version: v1.17.1
-  - name: amd-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "amd-gpu-operator" }}
-      version: v1.2.0
-  - name: cluster-autoscaler
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler" }}
-      version: 9.29.3
-  - name: cluster-autoscaler-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler-openstack" }}
-      version: v0.1.0
----
-apiVersion: unikorn-cloud.org/v1alpha1
-kind: KubernetesClusterApplicationBundle
-metadata:
-  name: kubernetes-cluster-1.2.1
-  labels:
-    {{- include "unikorn.labels" . | nindent 4 }}
-spec:
-  version: 1.2.1
-  applications:
-  - name: cluster-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-openstack" }}
-      version: v0.6.1
-  - name: cilium
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cilium" }}
-      version: 1.18.0-pre.0
-  - name: openstack-cloud-provider
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-cloud-provider" }}
-      version: 2.32.0
-  - name: openstack-plugin-cinder-csi
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "openstack-plugin-cinder-csi" }}
-      version: 2.32.0
-  - name: metrics-server
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "metrics-server" }}
-      version: 3.12.2
-  - name: nvidia-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "nvidia-gpu-operator" }}
-      version: v23.9.1
-  - name: cert-manager
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cert-manager" }}
-      version: v1.17.1
-  - name: amd-gpu-operator
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "amd-gpu-operator" }}
-      version: v1.2.0
-  - name: cluster-autoscaler
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler" }}
-      version: 9.29.3
-  - name: cluster-autoscaler-openstack
-    reference:
-      kind: HelmApplication
-      name: {{ include "resource.id" "cluster-autoscaler-openstack" }}
-      version: v0.1.0
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: KubernetesClusterApplicationBundle
@@ -342,6 +103,71 @@ spec:
       kind: HelmApplication
       name: {{ include "resource.id" "cert-manager" }}
       version: v1.17.1
+  - name: amd-gpu-operator
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "amd-gpu-operator" }}
+      version: v1.2.0
+  - name: cluster-autoscaler
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "cluster-autoscaler" }}
+      version: 9.29.3
+  - name: cluster-autoscaler-openstack
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "cluster-autoscaler-openstack" }}
+      version: v0.1.0
+  - name: gateway-api-crds
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "gateway-api-crds" }}
+      version: v1.3.0
+---
+apiVersion: unikorn-cloud.org/v1alpha1
+kind: KubernetesClusterApplicationBundle
+metadata:
+  name: kubernetes-cluster-1.4.0
+  labels:
+    {{- include "unikorn.labels" . | nindent 4 }}
+spec:
+  version: 1.4.0
+  applications:
+  - name: cluster-openstack
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "cluster-openstack" }}
+      version: v0.6.1
+  - name: cilium
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "cilium" }}
+      version: 1.18.6
+  - name: openstack-cloud-provider
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "openstack-cloud-provider" }}
+      version: 2.32.0
+  - name: openstack-plugin-cinder-csi
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "openstack-plugin-cinder-csi" }}
+      version: 2.32.0
+  - name: metrics-server
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "metrics-server" }}
+      version: 3.12.2
+  - name: nvidia-gpu-operator
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "nvidia-gpu-operator" }}
+      version: v25.10.1
+  - name: cert-manager
+    reference:
+      kind: HelmApplication
+      name: {{ include "resource.id" "cert-manager" }}
+      version: v1.19.2
   - name: amd-gpu-operator
     reference:
       kind: HelmApplication
