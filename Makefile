@@ -184,6 +184,7 @@ lint: $(GENDIR)
 	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(LINT_VERSION)
 	$(GOBIN)/golangci-lint run --timeout=10m ./...
 	helm lint --strict charts/kubernetes
+	go run ./hack/sanitize-applications
 
 # Validate the server OpenAPI schema is legit.
 .PHONY: validate
