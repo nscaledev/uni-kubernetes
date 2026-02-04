@@ -6,6 +6,17 @@ info:
     management of Kubernetes clusters.
   version: 1.13.0
 paths:
+  /.well-known/openid-protected-resource:
+    description: |-
+      Implements OIDC authorization service discovery.
+    get:
+      x-no-security-requirements: true
+      x-hidden: true
+      description: |-
+        Reads the OIDC discovery page identifying authorization servers.
+      responses:
+        '200':
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml#/components/responses/openidProtectedResourceResponse'
   /api/v1/organizations/{organizationID}/regions:
     description: |-
       Accesses a filtered list of regions for use with different cluster types.

@@ -13,9 +13,9 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	github.com/unikorn-cloud/core v1.13.1-0.20260127150215-6c9e7fe90056
-	github.com/unikorn-cloud/identity v1.13.1-0.20260128113817-e2a2a05feed5
-	github.com/unikorn-cloud/region v1.13.1-0.20260128114756-a3c30823cd9f
+	github.com/unikorn-cloud/core v1.13.1-0.20260203120458-932f9b7c24b4
+	github.com/unikorn-cloud/identity v1.13.1-0.20260203135702-8ce26aa40d2b
+	github.com/unikorn-cloud/region v1.13.1-0.20260204134519-6bfe70aeeb0a
 	go.uber.org/mock v0.5.2
 	gopkg.in/ini.v1 v1.67.0
 	k8s.io/api v0.33.1
@@ -80,7 +80,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.64.0 // indirect
 	github.com/prometheus/procfs v0.16.1 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
+	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/spjmurray/go-util v0.1.3 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/xlab/treeprint v1.2.0 // indirect
@@ -105,8 +105,8 @@ require (
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
-	google.golang.org/grpc v1.72.1 // indirect
-	google.golang.org/protobuf v1.36.6 // indirect
+	google.golang.org/grpc v1.73.0 // indirect
+	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

@@ -28,6 +28,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
+	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
@@ -210,7 +211,7 @@ func convertList(in *unikornv1.KubernetesClusterList) openapi.KubernetesClusters
 func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.KubernetesClusterApplicationBundle, error) {
 	applicationBundles, err := appclient.ListCluster(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list application bundles", err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.KubernetesClusterApplicationBundle) bool {
@@ -226,7 +227,7 @@ func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appB
 	})
 
 	if len(applicationBundles.Items) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an application bundle")
+		return nil, fmt.Errorf("%w: unable to select an application bundle", coreerrors.ErrConsistency)
 	}
 
 	// Return the newest bundle
@@ -237,7 +238,7 @@ func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appB
 func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *openapi.KubernetesClusterWrite) (*regionapi.Flavor, error) {
 	flavors, err := g.region.Flavors(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list flavors").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list flavors", err)
 	}
 
 	// No baremetal flavors, and no GPUs.  Would be very wasteful otherwise!
@@ -262,7 +263,7 @@ func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *open
 	})
 
 	if len(flavors) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select a control plane flavor")
+		return nil, fmt.Errorf("%w: unable to select a control plane flavor", coreerrors.ErrConsistency)
 	}
 
 	// Pick the most "epic" flavor possible, things tend to melt if you are too stingy.
@@ -274,7 +275,7 @@ func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *open
 func (g *generator) defaultImage(ctx context.Context, request *openapi.KubernetesClusterWrite) (*regionapi.Image, error) {
 	images, err := g.region.Images(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list images").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list images", err)
 	}
 
 	// Only get the version asked for.
@@ -287,7 +288,7 @@ func (g *generator) defaultImage(ctx context.Context, request *openapi.Kubernete
 	})
 
 	if len(images) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an image")
+		return nil, fmt.Errorf("%w: unable to select an image", coreerrors.ErrConsistency)
 	}
 
 	return &images[0], nil
@@ -630,12 +631,12 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, clu
 	}
 
 	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
-		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+		return nil, fmt.Errorf("%w: failed to set identity metadata", err)
 	}
 
 	// The resource belongs to its cluster manager, for cascading deletion.
 	if err := controllerutil.SetOwnerReference(clusterManager, out, g.client.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-		return nil, errors.OAuth2ServerError("unable to set resource owner").WithError(err)
+		return nil, fmt.Errorf("%w: unable to set resource owner", err)
 	}
 
 	g.preserveDefaultedFields(out)

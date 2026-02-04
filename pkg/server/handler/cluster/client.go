@@ -34,7 +34,6 @@ import (
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
@@ -115,7 +114,7 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 
 	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
+		return nil, fmt.Errorf("%w: failed to build label selector", err)
 	}
 
 	selector := labels.NewSelector()
@@ -126,7 +125,7 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 	}
 
 	if err := c.client.List(ctx, result, options); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list clusters", err)
 	}
 
 	tagSelector, err := coreutil.DecodeTagSelectorParam(params.Tag)
@@ -152,7 +151,7 @@ func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikorn
 			return nil, errors.HTTPNotFound().WithError(err)
 		}
 
-		return nil, errors.OAuth2ServerError("unable to get cluster").WithError(err)
+		return nil, fmt.Errorf("%w: unable to get cluster", err)
 	}
 
 	return result, nil
@@ -182,12 +181,12 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 
 	vclusterConfig, err := vc.RESTConfig(ctx, project.Name, cluster.Spec.ClusterManagerID, false)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to get control plane rest config").WithError(err)
+		return nil, fmt.Errorf("%w: failed to get control plane rest config", err)
 	}
 
 	vclusterClient, err := client.New(vclusterConfig, client.Options{})
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to get control plane client").WithError(err)
+		return nil, fmt.Errorf("%w: failed to get control plane client", err)
 	}
 
 	objectKey := client.ObjectKey{
@@ -202,7 +201,7 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 			return nil, errors.HTTPNotFound().WithError(err)
 		}
 
-		return nil, errors.OAuth2ServerError("unable to get cluster configuration").WithError(err)
+		return nil, fmt.Errorf("%w: unable to get cluster configuration", err)
 	}
 
 	return secret.Data["value"], nil
@@ -295,11 +294,11 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 
 	resp, err := c.region.Client().PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(ctx, organizationID, projectID, request)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to create identity").WithError(err)
+		return nil, fmt.Errorf("%w: unable to create identity", err)
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create identity").WithError(coreapiutils.ExtractError(resp.StatusCode(), resp))
+		return nil, errors.PropagateError(resp.HTTPResponse, resp)
 	}
 
 	return resp.JSON201, nil
@@ -333,11 +332,11 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 
 	resp, err := c.region.Client().PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("unable to physical network").WithError(err)
+		return nil, fmt.Errorf("%w: unable to physical network", err)
 	}
 
 	if resp.StatusCode() != http.StatusCreated {
-		return nil, errors.OAuth2ServerError("unable to create physical network").WithError(coreapiutils.ExtractError(resp.StatusCode(), resp))
+		return nil, errors.PropagateError(resp.HTTPResponse, resp)
 	}
 
 	return resp.JSON201, nil
@@ -365,7 +364,7 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 	if region.Spec.Features.PhysicalNetworks {
 		physicalNetwork, err := c.createPhysicalNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
 		if err != nil {
-			return errors.OAuth2ServerError("failed to create physical network").WithError(err)
+			return fmt.Errorf("%w: failed to create physical network", err)
 		}
 
 		cluster.Annotations[constants.PhysicalNetworkAnnotation] = physicalNetwork.Metadata.Id
@@ -419,7 +418,7 @@ func (c *Client) getClusterManager(ctx context.Context, namespace string, reques
 			return nil, errors.OAuth2InvalidRequest("requested cluster manager does not exist").WithError(err)
 		}
 
-		return nil, errors.OAuth2ServerError("cluster manager get failed").WithError(err)
+		return nil, fmt.Errorf("%w: cluster manager get failed", err)
 	}
 
 	return clusterManager, nil
@@ -459,7 +458,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 
 	allocations, err := c.generateAllocations(ctx, organizationID, cluster)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return nil, fmt.Errorf("%w: failed to generate quota allocations", err)
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Create(ctx, cluster, allocations); err != nil {
@@ -476,7 +475,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 	}
 
 	if err := c.client.Create(ctx, cluster); err != nil {
-		return nil, errors.OAuth2ServerError("failed to create cluster").WithError(err)
+		return nil, fmt.Errorf("%w: failed to create cluster", err)
 	}
 
 	return convert(cluster), nil
@@ -503,7 +502,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 			return errors.HTTPNotFound().WithError(err)
 		}
 
-		return errors.OAuth2ServerError("failed to delete cluster").WithError(err)
+		return fmt.Errorf("%w: failed to delete cluster", err)
 	}
 
 	return nil
@@ -536,7 +535,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator, metadataMutator); err != nil {
-		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
+		return fmt.Errorf("%w: failed to merge metadata", err)
 	}
 
 	// Preserve networking options as if they change it'll be fairly catastrophic.
@@ -551,7 +550,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 
 	allocations, err := c.generateAllocations(ctx, organizationID, updated)
 	if err != nil {
-		return errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return fmt.Errorf("%w: failed to generate quota allocations", err)
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Update(ctx, updated, allocations); err != nil {
@@ -559,7 +558,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
-		return errors.OAuth2ServerError("failed to patch cluster").WithError(err)
+		return fmt.Errorf("%w: failed to patch cluster", err)
 	}
 
 	return nil

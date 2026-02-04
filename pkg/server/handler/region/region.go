@@ -24,7 +24,7 @@ import (
 	"slices"
 	"time"
 
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
+	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/util/cache"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
@@ -86,7 +86,7 @@ func (c *Client) Get(ctx context.Context, organizationID, regionID string) (*reg
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+		return nil, servererrors.PropagateError(resp.HTTPResponse, resp)
 	}
 
 	return resp.JSON200, nil
@@ -103,7 +103,7 @@ func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.R
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+		return nil, servererrors.PropagateError(resp.HTTPResponse, resp)
 	}
 
 	regions := *resp.JSON200
@@ -142,7 +142,7 @@ func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) (
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+		return nil, servererrors.PropagateError(resp.HTTPResponse, resp)
 	}
 
 	flavors := *resp.JSON200
@@ -171,7 +171,7 @@ func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+		return nil, servererrors.PropagateError(resp.HTTPResponse, resp)
 	}
 
 	images := *resp.JSON200
