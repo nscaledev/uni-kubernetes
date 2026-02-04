@@ -19,6 +19,8 @@ limitations under the License.
 package handler
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/spf13/pflag"
@@ -41,4 +43,11 @@ func (o *Options) AddFlags(f *pflag.FlagSet) {
 	f.DurationVar(&o.CacheMaxAge, "cache-max-age", 24*time.Hour, "How long to cache long-lived queries in the browser.")
 
 	o.Cluster.AddFlags(f)
+}
+
+// setCacheable allows the client to cache the response for this request for a
+// period of time to help throttle requests.
+func (o *Options) setCacheable(w http.ResponseWriter) {
+	w.Header().Add("Cache-Control", fmt.Sprintf("max-age=%d", o.CacheMaxAge/time.Second))
+	w.Header().Add("Cache-Control", "private")
 }

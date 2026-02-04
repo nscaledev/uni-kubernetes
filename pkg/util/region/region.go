@@ -25,7 +25,7 @@ import (
 	"net/http"
 
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
+	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
@@ -59,7 +59,7 @@ func Region(ctx context.Context, client regionapi.ClientWithResponsesInterface, 
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
+		return nil, servererrors.PropagateError(response.HTTPResponse, response)
 	}
 
 	return response.JSON200, nil

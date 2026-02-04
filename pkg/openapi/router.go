@@ -15,6 +15,9 @@ import (
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 
+	// (GET /.well-known/openid-protected-resource)
+	GetWellKnownOpenidProtectedResource(w http.ResponseWriter, r *http.Request)
+
 	// (GET /api/v1/organizations/{organizationID}/clustermanagers)
 	GetApiV1OrganizationsOrganizationIDClustermanagers(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter)
 
@@ -70,6 +73,11 @@ type ServerInterface interface {
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
 
 type Unimplemented struct{}
+
+// (GET /.well-known/openid-protected-resource)
+func (_ Unimplemented) GetWellKnownOpenidProtectedResource(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
 
 // (GET /api/v1/organizations/{organizationID}/clustermanagers)
 func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDClustermanagers(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter) {
@@ -164,6 +172,20 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetWellKnownOpenidProtectedResource operation middleware
+func (siw *ServerInterfaceWrapper) GetWellKnownOpenidProtectedResource(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWellKnownOpenidProtectedResource(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
 
 // GetApiV1OrganizationsOrganizationIDClustermanagers operation middleware
 func (siw *ServerInterfaceWrapper) GetApiV1OrganizationsOrganizationIDClustermanagers(w http.ResponseWriter, r *http.Request) {
@@ -1034,6 +1056,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		ErrorHandlerFunc:   options.ErrorHandlerFunc,
 	}
 
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/.well-known/openid-protected-resource", wrapper.GetWellKnownOpenidProtectedResource)
+	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/organizations/{organizationID}/clustermanagers", wrapper.GetApiV1OrganizationsOrganizationIDClustermanagers)
 	})

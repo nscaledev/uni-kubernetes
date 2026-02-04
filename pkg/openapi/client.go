@@ -91,6 +91,9 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// GetWellKnownOpenidProtectedResource request
+	GetWellKnownOpenidProtectedResource(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetApiV1OrganizationsOrganizationIDClustermanagers request
 	GetApiV1OrganizationsOrganizationIDClustermanagers(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -153,6 +156,18 @@ type ClientInterface interface {
 
 	// GetApiV1OrganizationsOrganizationIDVirtualclusters request
 	GetApiV1OrganizationsOrganizationIDVirtualclusters(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDVirtualclustersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) GetWellKnownOpenidProtectedResource(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetWellKnownOpenidProtectedResourceRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) GetApiV1OrganizationsOrganizationIDClustermanagers(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -429,6 +444,33 @@ func (c *Client) GetApiV1OrganizationsOrganizationIDVirtualclusters(ctx context.
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewGetWellKnownOpenidProtectedResourceRequest generates requests for GetWellKnownOpenidProtectedResource
+func NewGetWellKnownOpenidProtectedResourceRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/.well-known/openid-protected-resource")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
 // NewGetApiV1OrganizationsOrganizationIDClustermanagersRequest generates requests for GetApiV1OrganizationsOrganizationIDClustermanagers
@@ -1339,6 +1381,9 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// GetWellKnownOpenidProtectedResourceWithResponse request
+	GetWellKnownOpenidProtectedResourceWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetWellKnownOpenidProtectedResourceResponse, error)
+
 	// GetApiV1OrganizationsOrganizationIDClustermanagersWithResponse request
 	GetApiV1OrganizationsOrganizationIDClustermanagersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDClustermanagersResponse, error)
 
@@ -1401,6 +1446,28 @@ type ClientWithResponsesInterface interface {
 
 	// GetApiV1OrganizationsOrganizationIDVirtualclustersWithResponse request
 	GetApiV1OrganizationsOrganizationIDVirtualclustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDVirtualclustersParams, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDVirtualclustersResponse, error)
+}
+
+type GetWellKnownOpenidProtectedResourceResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *externalRef0.OpenidProtectedResourceResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r GetWellKnownOpenidProtectedResourceResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetWellKnownOpenidProtectedResourceResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type GetApiV1OrganizationsOrganizationIDClustermanagersResponse struct {
@@ -1853,6 +1920,15 @@ func (r GetApiV1OrganizationsOrganizationIDVirtualclustersResponse) StatusCode()
 	return 0
 }
 
+// GetWellKnownOpenidProtectedResourceWithResponse request returning *GetWellKnownOpenidProtectedResourceResponse
+func (c *ClientWithResponses) GetWellKnownOpenidProtectedResourceWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetWellKnownOpenidProtectedResourceResponse, error) {
+	rsp, err := c.GetWellKnownOpenidProtectedResource(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseGetWellKnownOpenidProtectedResourceResponse(rsp)
+}
+
 // GetApiV1OrganizationsOrganizationIDClustermanagersWithResponse request returning *GetApiV1OrganizationsOrganizationIDClustermanagersResponse
 func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDClustermanagersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDClustermanagersResponse, error) {
 	rsp, err := c.GetApiV1OrganizationsOrganizationIDClustermanagers(ctx, organizationID, reqEditors...)
@@ -2052,6 +2128,32 @@ func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDVirtualclusters
 		return nil, err
 	}
 	return ParseGetApiV1OrganizationsOrganizationIDVirtualclustersResponse(rsp)
+}
+
+// ParseGetWellKnownOpenidProtectedResourceResponse parses an HTTP response from a GetWellKnownOpenidProtectedResourceWithResponse call
+func ParseGetWellKnownOpenidProtectedResourceResponse(rsp *http.Response) (*GetWellKnownOpenidProtectedResourceResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &GetWellKnownOpenidProtectedResourceResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest externalRef0.OpenidProtectedResourceResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseGetApiV1OrganizationsOrganizationIDClustermanagersResponse parses an HTTP response from a GetApiV1OrganizationsOrganizationIDClustermanagersWithResponse call

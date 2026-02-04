@@ -82,7 +82,7 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 
 	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
+		return nil, fmt.Errorf("%w: failed to build label selector", err)
 	}
 
 	selector := labels.NewSelector()
@@ -93,7 +93,7 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 	}
 
 	if err := c.client.List(ctx, result, options); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list clusters").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list clusters", err)
 	}
 
 	tagSelector, err := coreutil.DecodeTagSelectorParam(params.Tag)
@@ -119,7 +119,7 @@ func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikorn
 			return nil, errors.HTTPNotFound().WithError(err)
 		}
 
-		return nil, errors.OAuth2ServerError("unable to get cluster").WithError(err)
+		return nil, fmt.Errorf("%w: unable to get cluster", err)
 	}
 
 	return result, nil
@@ -189,7 +189,7 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 			return nil, errors.HTTPNotFound().WithError(err)
 		}
 
-		return nil, errors.OAuth2ServerError("unable to get cluster configuration").WithError(err)
+		return nil, fmt.Errorf("%w: unable to get cluster configuration", err)
 	}
 
 	return secret.Data["config"], nil
@@ -282,7 +282,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 
 	allocations, err := c.generateAllocations(ctx, organizationID, cluster)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return nil, fmt.Errorf("%w: failed to generate quota allocations", err)
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Create(ctx, cluster, allocations); err != nil {
@@ -290,7 +290,7 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := c.client.Create(ctx, cluster); err != nil {
-		return nil, errors.OAuth2ServerError("failed to create cluster").WithError(err)
+		return nil, fmt.Errorf("%w: failed to create cluster", err)
 	}
 
 	return convert(cluster), nil
@@ -321,7 +321,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 			return errors.HTTPNotFound().WithError(err)
 		}
 
-		return errors.OAuth2ServerError("failed to delete cluster").WithError(err)
+		return fmt.Errorf("%w: failed to delete cluster", err)
 	}
 
 	return nil
@@ -349,7 +349,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator, metadataMutator); err != nil {
-		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
+		return fmt.Errorf("%w: failed to merge metadata", err)
 	}
 
 	// Experience has taught me that modifying caches by accident is a bad thing
@@ -361,7 +361,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 
 	allocations, err := c.generateAllocations(ctx, organizationID, updated)
 	if err != nil {
-		return errors.OAuth2ServerError("failed to generate quota allocations").WithError(err)
+		return fmt.Errorf("%w: failed to generate quota allocations", err)
 	}
 
 	if err := identityclient.NewAllocations(c.client, c.identity).Update(ctx, updated, allocations); err != nil {
@@ -369,7 +369,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
-		return errors.OAuth2ServerError("failed to patch cluster").WithError(err)
+		return fmt.Errorf("%w: failed to patch cluster", err)
 	}
 
 	return nil

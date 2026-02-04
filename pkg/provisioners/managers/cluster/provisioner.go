@@ -38,8 +38,8 @@ import (
 	"github.com/unikorn-cloud/core/pkg/provisioners/conditional"
 	"github.com/unikorn-cloud/core/pkg/provisioners/remotecluster"
 	"github.com/unikorn-cloud/core/pkg/provisioners/serial"
+	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/util"
-	coreapiutils "github.com/unikorn-cloud/core/pkg/util/api"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
@@ -472,7 +472,7 @@ func (p *Provisioner) getFlavors(ctx context.Context, client regionapi.ClientWit
 	}
 
 	if resp.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(resp.StatusCode(), resp)
+		return nil, servererrors.PropagateError(resp.HTTPResponse, resp)
 	}
 
 	flavors := *resp.JSON200
@@ -489,7 +489,7 @@ func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWi
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
+		return nil, servererrors.PropagateError(response.HTTPResponse, response)
 	}
 
 	resource := response.JSON200
@@ -519,7 +519,7 @@ func (p *Provisioner) deleteIdentity(ctx context.Context, client regionapi.Clien
 	// we can delete the cluster, a not found means it's been deleted already
 	// and again can proceed.  The goal here is not to leak resources.
 	if statusCode != http.StatusAccepted && statusCode != http.StatusNotFound {
-		return coreapiutils.ExtractError(response.StatusCode(), response)
+		return servererrors.PropagateError(response.HTTPResponse, response)
 	}
 
 	return nil
@@ -540,7 +540,7 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
+		return nil, servererrors.PropagateError(response.HTTPResponse, response)
 	}
 
 	resource := response.JSON200
@@ -565,7 +565,7 @@ func (p *Provisioner) getExternalNetwork(ctx context.Context, client regionapi.C
 	}
 
 	if response.StatusCode() != http.StatusOK {
-		return nil, coreapiutils.ExtractError(response.StatusCode(), response)
+		return nil, servererrors.PropagateError(response.HTTPResponse, response)
 	}
 
 	externalNetworks := *response.JSON200

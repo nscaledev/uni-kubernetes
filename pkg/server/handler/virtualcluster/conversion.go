@@ -20,10 +20,11 @@ package virtualcluster
 import (
 	"context"
 	goerrors "errors"
+	"fmt"
 	"slices"
 
+	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
-	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
@@ -123,7 +124,7 @@ func convertList(in *unikornv1.VirtualKubernetesClusterList) openapi.VirtualKube
 func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.VirtualKubernetesClusterApplicationBundle, error) {
 	applicationBundles, err := appclient.ListVirtualCluster(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list application bundles", err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.VirtualKubernetesClusterApplicationBundle) bool {
@@ -139,7 +140,7 @@ func (g *generator) defaultApplicationBundle(ctx context.Context, appclient appB
 	})
 
 	if len(applicationBundles.Items) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an application bundle")
+		return nil, fmt.Errorf("%w: unable to select an application bundle", coreerrors.ErrConsistency)
 	}
 
 	// Return the newest bundle
@@ -198,7 +199,7 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, req
 	}
 
 	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
-		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+		return nil, fmt.Errorf("%w: failed to set identity metadata", err)
 	}
 
 	g.preserveDefaultedFields(out)

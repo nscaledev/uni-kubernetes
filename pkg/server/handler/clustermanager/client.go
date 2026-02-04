@@ -20,9 +20,11 @@ package clustermanager
 
 import (
 	"context"
+	"fmt"
 	"slices"
 
 	"github.com/unikorn-cloud/core/pkg/constants"
+	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	coreopenapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
@@ -125,7 +127,7 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Clust
 
 	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to build label selector").WithError(err)
+		return nil, fmt.Errorf("%w: failed to build label selector", err)
 	}
 
 	selector := labels.NewSelector()
@@ -136,7 +138,7 @@ func (c *Client) List(ctx context.Context, organizationID string) (openapi.Clust
 	}
 
 	if err := c.client.List(ctx, result, options); err != nil {
-		return nil, errors.OAuth2ServerError("failed to list control planes").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list control planes", err)
 	}
 
 	slices.SortStableFunc(result.Items, unikornv1.CompareClusterManager)
@@ -153,7 +155,7 @@ func (c *Client) get(ctx context.Context, namespace, clusterManagerID string) (*
 			return nil, errors.HTTPNotFound().WithError(err)
 		}
 
-		return nil, errors.OAuth2ServerError("failed to get control plane").WithError(err)
+		return nil, fmt.Errorf("%w: failed to get control plane", err)
 	}
 
 	return result, nil
@@ -163,7 +165,7 @@ func (c *Client) get(ctx context.Context, namespace, clusterManagerID string) (*
 func (c *Client) defaultApplicationBundle(ctx context.Context, appclient appBundleLister) (*unikornv1.ClusterManagerApplicationBundle, error) {
 	applicationBundles, err := appclient.ListClusterManager(ctx)
 	if err != nil {
-		return nil, errors.OAuth2ServerError("failed to list application bundles").WithError(err)
+		return nil, fmt.Errorf("%w: failed to list application bundles", err)
 	}
 
 	applicationBundles.Items = slices.DeleteFunc(applicationBundles.Items, func(bundle unikornv1.ClusterManagerApplicationBundle) bool {
@@ -179,7 +181,7 @@ func (c *Client) defaultApplicationBundle(ctx context.Context, appclient appBund
 	})
 
 	if len(applicationBundles.Items) == 0 {
-		return nil, errors.OAuth2ServerError("unable to select an application bundle")
+		return nil, fmt.Errorf("%w: unable to select an application bundle", coreerrors.ErrConsistency)
 	}
 
 	// Sort by semanitc version...
@@ -208,7 +210,7 @@ func (c *Client) generate(ctx context.Context, appclient appBundleLister, namesp
 	}
 
 	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
-		return nil, errors.OAuth2ServerError("failed to set identity metadata").WithError(err)
+		return nil, fmt.Errorf("%w: failed to set identity metadata", err)
 	}
 
 	return out, nil
@@ -236,7 +238,7 @@ func (c *Client) create(ctx context.Context, appclient appBundleLister, organiza
 			return nil, errors.HTTPConflict()
 		}
 
-		return nil, errors.OAuth2ServerError("failed to create control plane").WithError(err)
+		return nil, fmt.Errorf("%w: failed to create control plane", err)
 	}
 
 	return resource, nil
@@ -278,7 +280,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterM
 			return errors.HTTPNotFound().WithError(err)
 		}
 
-		return errors.OAuth2ServerError("failed to delete control plane").WithError(err)
+		return fmt.Errorf("%w: failed to delete control plane", err)
 	}
 
 	return nil
@@ -306,7 +308,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	}
 
 	if err := conversion.UpdateObjectMetadata(required, current, common.IdentityMetadataMutator); err != nil {
-		return errors.OAuth2ServerError("failed to merge metadata").WithError(err)
+		return fmt.Errorf("%w: failed to merge metadata", err)
 	}
 
 	updated := current.DeepCopy()
@@ -315,7 +317,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 	updated.Spec = required.Spec
 
 	if err := c.client.Patch(ctx, updated, client.MergeFrom(current)); err != nil {
-		return errors.OAuth2ServerError("failed to patch control plane").WithError(err)
+		return fmt.Errorf("%w: failed to patch control plane", err)
 	}
 
 	return nil
