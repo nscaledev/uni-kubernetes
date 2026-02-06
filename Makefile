@@ -134,7 +134,7 @@ images-kind-load: images
 
 .PHONY: test-unit
 test-unit:
-	go test -coverpkg ./... -coverprofile cover.out $(shell go list ./... | grep -v /test/contracts)
+	go test -coverpkg ./... -coverprofile cover.out ./...
 	go tool cover -html cover.out -o cover.html
 
 # Build a binary and install it.
@@ -226,12 +226,14 @@ PACT_BROKER_USERNAME ?= pact
 PACT_BROKER_PASSWORD ?= pact
 SERVICE_NAME ?= uni-kubernetes
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+PACT_GOFLAGS=-tags=integration
 
 .PHONY: test-contracts-consumer
 test-contracts-consumer:
 	@echo "Running consumer contract tests..."
 	CGO_LDFLAGS="$(PACT_LD_FLAGS)" \
 	$(PACT_LIB_ENV) \
+	GOFLAGS="$(PACT_GOFLAGS)" \
 	go test ./test/contracts/consumer/... -v -count=1
 
 # Run consumer tests with verbose output
@@ -241,6 +243,7 @@ test-contracts-consumer-verbose:
 	CGO_LDFLAGS="$(PACT_LD_FLAGS)" \
 	$(PACT_LIB_ENV) \
 	VERBOSE=true \
+	GOFLAGS="$(PACT_GOFLAGS)" \
 	go test ./test/contracts/consumer/... -v -count=1
 
 # Run consumer tests and publish to broker (for CI)
