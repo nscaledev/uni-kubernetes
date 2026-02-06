@@ -4,8 +4,8 @@ description: A Helm chart for deploying Unikorn Kubernetes Service
 
 type: application
 
-version: 1.14.0-rc1+simon1
-appVersion: 1.14.0-rc1+simon1
+version: 1.14.0-rc2
+appVersion: 1.14.0-rc2
 
 icon: https://raw.githubusercontent.com/unikorn-cloud/assets/main/images/logos/dark-on-light/icon.png
 
