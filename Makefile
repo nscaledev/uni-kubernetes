@@ -201,3 +201,111 @@ validate-docs: $(OPENAPI_FILES)
 .PHONY: license
 license:
 	go run github.com/unikorn-cloud/core/hack/check_license
+
+# Pact library path configuration (OS-specific defaults)
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    PACT_LIB_PATH ?= /usr/local/lib
+    PACT_LD_FLAGS = -L$(PACT_LIB_PATH)
+    PACT_LIB_ENV = LD_LIBRARY_PATH=$(PACT_LIB_PATH):$$LD_LIBRARY_PATH
+else ifeq ($(UNAME_S),Darwin)
+    PACT_LIB_PATH ?= $(HOME)/Library/pact
+    PACT_LD_FLAGS = -L$(PACT_LIB_PATH) -Wl,-rpath,$(PACT_LIB_PATH)
+    PACT_LIB_ENV = DYLD_LIBRARY_PATH=$(PACT_LIB_PATH):$$DYLD_LIBRARY_PATH
+endif
+
+# Clean contract test artifacts
+.PHONY: test-contracts-clean
+test-contracts-clean:
+	@rm -rf test/contracts/consumer/**/pacts
+
+# Consumer contract test configuration
+CONSUMER_VERSION ?= $(REVISION)
+PACT_BROKER_URL ?= http://localhost:9292
+PACT_BROKER_USERNAME ?= pact
+PACT_BROKER_PASSWORD ?= pact
+SERVICE_NAME ?= uni-kubernetes
+BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
+PACT_GOFLAGS="-tags=integration"
+
+.PHONY: test-contracts-consumer
+test-contracts-consumer:
+	@echo "Running consumer contract tests..."
+	CGO_LDFLAGS="$(PACT_LD_FLAGS)" \
+	$(PACT_LIB_ENV) \
+	GOFLAGS="$(PACT_GOFLAGS)" \
+	go test ./test/contracts/consumer/... -v -count=1
+
+# Run consumer tests with verbose output
+.PHONY: test-contracts-consumer-verbose
+test-contracts-consumer-verbose:
+	@echo "Running consumer contract tests with verbose output..."
+	CGO_LDFLAGS="$(PACT_LD_FLAGS)" \
+	$(PACT_LIB_ENV) \
+	VERBOSE=true \
+	GOFLAGS="$(PACT_GOFLAGS)" \
+	go test ./test/contracts/consumer/... -v -count=1
+
+# Run consumer tests and publish to broker (for CI)
+.PHONY: test-contracts-consumer-ci
+test-contracts-consumer-ci: test-contracts-consumer publish-contracts-consumer
+	@echo "Consumer contract tests and publishing completed successfully"
+
+# Publish consumer pact files to Pact Broker
+# Publishes all pacts from test/contracts/consumer/*/pacts directories
+.PHONY: publish-contracts-consumer
+publish-contracts-consumer:
+	@echo "Publishing consumer pacts to Pact Broker..."
+	@echo "Consumer Version: $(CONSUMER_VERSION)"
+	@echo "Pact Broker URL: $(PACT_BROKER_URL)"
+	docker run --rm \
+		--network host \
+		-v $(PWD)/test/contracts/consumer:/consumer \
+		-w /consumer \
+		pactfoundation/pact-cli:latest \
+		publish \
+		--broker-base-url="$(PACT_BROKER_URL)" \
+		--broker-username="$(PACT_BROKER_USERNAME)" \
+		--broker-password="$(PACT_BROKER_PASSWORD)" \
+		--consumer-app-version="$(CONSUMER_VERSION)" \
+		--branch="$(BRANCH)" \
+		./*/pacts
+
+# Alias for publishing pacts (shorter name for CI workflows)
+.PHONY: publish-pacts
+publish-pacts: publish-contracts-consumer
+
+# Can-I-Deploy check
+.PHONY: can-i-deploy
+can-i-deploy:
+	@echo "Checking if $(SERVICE_NAME) version $(CONSUMER_VERSION) can be deployed to production..."
+	docker run --rm \
+		--network host \
+		pactfoundation/pact-cli:latest \
+		broker can-i-deploy \
+		--pacticipant="$(SERVICE_NAME)" \
+		--version="$(CONSUMER_VERSION)" \
+		--to-environment="production" \
+		--broker-base-url="$(PACT_BROKER_URL)" \
+		--broker-username="$(PACT_BROKER_USERNAME)" \
+		--broker-password="$(PACT_BROKER_PASSWORD)"
+
+# Record deployment
+.PHONY: record-deployment
+record-deployment:
+	@echo "Recording deployment of $(SERVICE_NAME) version $(CONSUMER_VERSION) to production..."
+	docker run --rm \
+		--network host \
+		pactfoundation/pact-cli:latest \
+		broker record-deployment \
+		--pacticipant="$(SERVICE_NAME)" \
+		--version="$(CONSUMER_VERSION)" \
+		--environment="production" \
+		--broker-base-url="$(PACT_BROKER_URL)" \
+		--broker-username="$(PACT_BROKER_USERNAME)" \
+		--broker-password="$(PACT_BROKER_PASSWORD)"
+
+# Run all contract tests (consumer only)
+.PHONY: test-contracts
+test-contracts: test-contracts-consumer
+	@echo "All contract tests completed successfully"
