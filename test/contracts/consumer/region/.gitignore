@@ -1,0 +1,3 @@
+# Pact files generated during contract testing
+pacts/
+*.log
