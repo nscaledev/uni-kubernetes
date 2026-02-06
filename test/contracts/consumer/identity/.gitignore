@@ -1,0 +1,3 @@
+# Ignore generated pact files - they will be generated during tests
+# and published to the Pact Broker
+pacts/
