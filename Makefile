@@ -226,7 +226,7 @@ PACT_BROKER_USERNAME ?= pact
 PACT_BROKER_PASSWORD ?= pact
 SERVICE_NAME ?= uni-kubernetes
 BRANCH ?= $(shell git rev-parse --abbrev-ref HEAD)
-PACT_GOFLAGS="-tags=integration"
+PACT_GOFLAGS=-tags=integration
 
 .PHONY: test-contracts-consumer
 test-contracts-consumer:
