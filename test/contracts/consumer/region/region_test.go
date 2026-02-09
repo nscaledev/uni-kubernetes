@@ -50,6 +50,18 @@ func createRegionClient(config consumer.MockServerConfig) (*regionapi.ClientWith
 	return regionapi.NewClientWithResponses(url)
 }
 
+// withRegionClient is a helper that creates a region client and executes the provided test function.
+func withRegionClient(ctx context.Context, testFunc func(*regionapi.ClientWithResponses) error) func(consumer.MockServerConfig) error {
+	return func(config consumer.MockServerConfig) error {
+		client, err := createRegionClient(config)
+		if err != nil {
+			return fmt.Errorf("creating region client: %w", err)
+		}
+
+		return testFunc(client)
+	}
+}
+
 var _ = Describe("Region Service Contract", func() {
 	var (
 		pact *consumer.V4HTTPMockProvider
@@ -99,13 +111,8 @@ var _ = Describe("Region Service Contract", func() {
 						})
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(
 						ctx, organizationID, regionID)
 					if err != nil {
 						return fmt.Errorf("getting region detail: %w", err)
@@ -115,7 +122,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(resp.JSON200).NotTo(BeNil())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -147,13 +154,8 @@ var _ = Describe("Region Service Contract", func() {
 						}, 1))
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(
 						ctx, organizationID)
 					if err != nil {
 						return fmt.Errorf("listing regions: %w", err)
@@ -165,7 +167,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect((*resp.JSON200)[0].Spec.Type).To(Equal(regionapi.RegionTypeOpenstack))
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -201,13 +203,8 @@ var _ = Describe("Region Service Contract", func() {
 						}, 1))
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(
 						ctx, organizationID, regionID)
 					if err != nil {
 						return fmt.Errorf("listing flavors: %w", err)
@@ -218,7 +215,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(*resp.JSON200).NotTo(BeEmpty())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -253,13 +250,8 @@ var _ = Describe("Region Service Contract", func() {
 						}, 1))
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(
 						ctx, organizationID, regionID)
 					if err != nil {
 						return fmt.Errorf("listing images: %w", err)
@@ -270,7 +262,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(*resp.JSON200).NotTo(BeEmpty())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -321,12 +313,7 @@ var _ = Describe("Region Service Contract", func() {
 						})
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					identityReq := regionapi.IdentityWrite{
 						Metadata: coreclient.ResourceWriteMetadata{
 							Name:        "kubernetes-cluster-test",
@@ -337,7 +324,7 @@ var _ = Describe("Region Service Contract", func() {
 						},
 					}
 
-					resp, err := regionClient.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(
+					resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(
 						ctx, organizationID, projectID, identityReq)
 					if err != nil {
 						return fmt.Errorf("creating identity: %w", err)
@@ -347,7 +334,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(resp.JSON201).NotTo(BeNil())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -394,13 +381,8 @@ var _ = Describe("Region Service Contract", func() {
 						})
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(
 						ctx, organizationID, projectID, identityID)
 					if err != nil {
 						return fmt.Errorf("getting identity: %w", err)
@@ -410,7 +392,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(resp.JSON200).NotTo(BeNil())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -437,13 +419,8 @@ var _ = Describe("Region Service Contract", func() {
 							organizationID, projectID, identityID)).
 					WillRespondWith(202)
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(
 						ctx, organizationID, projectID, identityID)
 					if err != nil {
 						return fmt.Errorf("deleting identity: %w", err)
@@ -452,7 +429,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(resp.StatusCode()).To(Equal(202))
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -506,12 +483,7 @@ var _ = Describe("Region Service Contract", func() {
 						})
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					networkReq := regionapi.NetworkWrite{
 						Metadata: coreclient.ResourceWriteMetadata{
 							Name:        "kubernetes-cluster-test",
@@ -523,7 +495,7 @@ var _ = Describe("Region Service Contract", func() {
 						},
 					}
 
-					resp, err := regionClient.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(
+					resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(
 						ctx, organizationID, projectID, identityID, networkReq)
 					if err != nil {
 						return fmt.Errorf("creating network: %w", err)
@@ -533,7 +505,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(resp.JSON201).NotTo(BeNil())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -581,13 +553,8 @@ var _ = Describe("Region Service Contract", func() {
 						})
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksNetworkIDWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksNetworkIDWithResponse(
 						ctx, organizationID, projectID, identityID, networkID)
 					if err != nil {
 						return fmt.Errorf("getting network: %w", err)
@@ -597,7 +564,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(resp.JSON200).NotTo(BeNil())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
@@ -626,13 +593,8 @@ var _ = Describe("Region Service Contract", func() {
 						}, 1))
 					})
 
-				test := func(config consumer.MockServerConfig) error {
-					regionClient, err := createRegionClient(config)
-					if err != nil {
-						return fmt.Errorf("creating region client: %w", err)
-					}
-
-					resp, err := regionClient.GetApiV1OrganizationsOrganizationIDRegionsRegionIDExternalnetworksWithResponse(
+				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
+					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDExternalnetworksWithResponse(
 						ctx, organizationID, regionID)
 					if err != nil {
 						return fmt.Errorf("listing external networks: %w", err)
@@ -643,7 +605,7 @@ var _ = Describe("Region Service Contract", func() {
 					Expect(*resp.JSON200).NotTo(BeEmpty())
 
 					return nil
-				}
+				})
 
 				Expect(pact.ExecuteTest(testingT, test)).To(Succeed())
 			})
