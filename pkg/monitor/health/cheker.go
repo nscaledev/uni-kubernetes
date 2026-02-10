@@ -128,7 +128,7 @@ func (c *Checker[T, L]) check(ctx context.Context, r unikornv1.ManagableResource
 
 	updated.StatusConditionWrite(unikornv1.ConditionHealthy, status, reason, message)
 
-	if err := c.client.Status().Patch(ctx, updated, client.MergeFrom(r)); err != nil {
+	if err := c.client.Status().Patch(ctx, updated, client.MergeFromWithOptions(r, &client.MergeFromWithOptimisticLock{})); err != nil {
 		return err
 	}
 
