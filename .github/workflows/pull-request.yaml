@@ -99,3 +99,4 @@ jobs:
         PACT_BROKER_URL: ${{ vars.PACT_BROKER_URL_DEV }}
         PACT_BROKER_USERNAME: ${{ vars.PACT_BROKER_USERNAME }}
         PACT_BROKER_PASSWORD: ${{ secrets.PACT_BROKER_PASSWORD }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
