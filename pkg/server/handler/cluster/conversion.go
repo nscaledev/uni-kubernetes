@@ -192,6 +192,12 @@ func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
 		},
 	}
 
+	if in.Spec.Features != nil {
+		out.Spec.Features = &openapi.KubernetesClusterFeatures{
+			IngressController: &in.Spec.Features.IngressController,
+		}
+	}
+
 	return out
 }
 
@@ -571,6 +577,7 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster
 
 	cluster.Spec.Features.Autoscaling = g.existing.Spec.Features.Autoscaling
 	cluster.Spec.Features.GPUOperator = g.existing.Spec.Features.GPUOperator
+	cluster.Spec.Features.IngressController = g.existing.Spec.Features.IngressController
 }
 
 // generate generates the full cluster custom resource.
@@ -607,6 +614,15 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, clu
 		return nil, err
 	}
 
+	features := &unikornv1.KubernetesClusterFeaturesSpec{
+		Autoscaling: true,
+		GPUOperator: true,
+	}
+
+	if request.Spec.Features != nil && request.Spec.Features.IngressController != nil {
+		features.IngressController = *request.Spec.Features.IngressController
+	}
+
 	out := &unikornv1.KubernetesCluster{
 		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
 		Spec: unikornv1.KubernetesClusterSpec{
@@ -622,10 +638,7 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, clu
 			Network:                      *network,
 			ControlPlane:                 *kubernetesControlPlane,
 			WorkloadPools:                *kubernetesWorkloadPools,
-			Features: &unikornv1.KubernetesClusterFeaturesSpec{
-				Autoscaling: true,
-				GPUOperator: true,
-			},
+			Features:                     features,
 		},
 	}
 

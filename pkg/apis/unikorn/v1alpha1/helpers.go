@@ -187,6 +187,11 @@ func (c *KubernetesCluster) GPUOperatorEnabled() bool {
 	return c.Spec.Features != nil && c.Spec.Features.GPUOperator
 }
 
+// IngressControllerEnabled indicates whether to enable the Cilium ingress controller.
+func (c *KubernetesCluster) IngressControllerEnabled() bool {
+	return c.Spec.Features != nil && c.Spec.Features.IngressController
+}
+
 func (c *KubernetesCluster) GetWorkloadPool(name string) *KubernetesWorkloadPoolSpec {
 	for i, pool := range c.Spec.WorkloadPools.Pools {
 		if pool.Name == name {

@@ -96,5 +96,23 @@ func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersio
 		},
 	}
 
+	// Conditionally enable ingress controller if requested
+	if cluster.IngressControllerEnabled() {
+		values["ingressController"] = map[string]any{
+			"enabled":             true,
+			"loadbalancerMode":    "shared",
+			"default":             true,
+			"enableProxyProtocol": true,
+			"service": map[string]any{
+				"annotations": map[string]any{
+					"loadbalancer.openstack.org/proxy-protocol": "true",
+				},
+			},
+		}
+		values["gatewayAPI"] = map[string]any{
+			"enableProxyProtocol": true,
+		}
+	}
+
 	return values, nil
 }

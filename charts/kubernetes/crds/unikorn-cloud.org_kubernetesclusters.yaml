@@ -310,6 +310,11 @@ spec:
                       This is only installed if a workload pool has a flavor that defines
                       a valid GPU specification and vendor.
                     type: boolean
+                  ingressController:
+                    description: |-
+                      IngressController enables the Cilium ingress controller.
+                      This configures Cilium to act as an ingress controller for HTTP/HTTPS traffic.
+                    type: boolean
                 type: object
               network:
                 description: Network defines the Kubernetes networking.
