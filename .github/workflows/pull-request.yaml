@@ -99,3 +99,23 @@ jobs:
         PACT_BROKER_URL: ${{ vars.PACT_BROKER_URL_DEV }}
         PACT_BROKER_USERNAME: ${{ vars.PACT_BROKER_USERNAME }}
         PACT_BROKER_PASSWORD: ${{ secrets.PACT_BROKER_PASSWORD }}
+        BRANCH: ${{ github.head_ref || github.ref_name }}
+    - name: Check if I can deploy
+      run: make can-i-deploy
+      env:
+        PACT_BROKER_URL: ${{ vars.PACT_BROKER_URL_DEV }}
+        PACT_BROKER_USERNAME: ${{ vars.PACT_BROKER_USERNAME }}
+        PACT_BROKER_PASSWORD: ${{ secrets.PACT_BROKER_PASSWORD }}
+    - name: Tag as deployable
+      if: success()
+      run: |
+        docker run --rm \
+          --network host \
+          pactfoundation/pact-cli:latest \
+          pact-broker create-version-tag \
+          --pacticipant="uni-kubernetes" \
+          --version="$(git rev-parse HEAD)" \
+          --tag="deployable-to-dev" \
+          --broker-base-url="${{ vars.PACT_BROKER_URL_DEV }}" \
+          --broker-username="${{ vars.PACT_BROKER_USERNAME }}" \
+          --broker-password="${{ secrets.PACT_BROKER_PASSWORD }}"
