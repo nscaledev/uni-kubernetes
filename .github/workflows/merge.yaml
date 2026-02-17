@@ -29,3 +29,58 @@ jobs:
       uses: codecov/codecov-action@v5
       env:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+  ContractDeployment:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Get Latest Deployable Version
+      id: get_version
+      run: |
+        OUTPUT=$(docker run --rm \
+          --network host \
+          pactfoundation/pact-cli:latest \
+          pact-broker describe-version \
+          --pacticipant="uni-kubernetes" \
+          --latest="deployable-to-dev" \
+          --broker-base-url="${{ vars.PACT_BROKER_URL_DEV }}" \
+          --broker-username="${{ vars.PACT_BROKER_USERNAME }}" \
+          --broker-password="${{ secrets.PACT_BROKER_PASSWORD }}" \
+          --output=json)
+
+        VERSION=$(echo "$OUTPUT" | grep -o '"number"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
+
+        if [ -z "$VERSION" ]; then
+          echo "ERROR: No deployable version found with 'deployable-to-dev' tag"
+          echo "Broker response: $OUTPUT"
+          exit 1
+        fi
+
+        echo "Found deployable version: $VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Tag Main Branch
+      run: |
+        docker run --rm \
+          --network host \
+          pactfoundation/pact-cli:latest \
+          pact-broker create-version-tag \
+          --pacticipant="uni-kubernetes" \
+          --version="${{ steps.get_version.outputs.version }}" \
+          --tag="main" \
+          --broker-base-url="${{ vars.PACT_BROKER_URL_DEV }}" \
+          --broker-username="${{ vars.PACT_BROKER_USERNAME }}" \
+          --broker-password="${{ secrets.PACT_BROKER_PASSWORD }}"
+
+    - name: Record Deployment
+      run: |
+        docker run --rm \
+          --network host \
+          pactfoundation/pact-cli:latest \
+          pact-broker record-deployment \
+          --pacticipant="uni-kubernetes" \
+          --version="${{ steps.get_version.outputs.version }}" \
+          --environment="development" \
+          --broker-base-url="${{ vars.PACT_BROKER_URL_DEV }}" \
+          --broker-username="${{ vars.PACT_BROKER_USERNAME }}" \
+          --broker-password="${{ secrets.PACT_BROKER_PASSWORD }}"
