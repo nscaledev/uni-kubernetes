@@ -382,6 +382,9 @@ spec:
                       when Selector is set.  Inline pools are expected to be used for UI
                       generated clusters.
                     items:
+                      description: |-
+                        KubernetesWorkloadPoolSpec defines the requested machine pool
+                        state.
                       properties:
                         autoscaling:
                           description: |-
