@@ -45,9 +45,6 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 	// TODO: This includes the node-feature-discovery as a subchart, and doesn't expose
 	// node selectors/tolerations, however, it does scale to zero.
 	values := map[string]any{
-		"driver": map[string]any{
-			"enabled": false,
-		},
 		"operator": map[string]any{
 			"affinity": map[string]any{
 				"nodeAffinity": map[string]any{
