@@ -55,7 +55,7 @@ func New(getApplication application.GetterFunc, options *kubernetesprovisioners.
 // Ensure the Provisioner interface is implemented.
 var _ application.ValuesGenerator = &Provisioner{}
 
-func (p *Provisioner) generateStorageClass(name string, reclaimPolicy corev1.PersistentVolumeReclaimPolicy, volumeBindingMode storagev1.VolumeBindingMode, isDefault, volumeExpansion bool) *storagev1.StorageClass {
+func (p *Provisioner) generateStorageClass(name string, reclaimPolicy corev1.PersistentVolumeReclaimPolicy, volumeBindingMode storagev1.VolumeBindingMode, volumeExpansion bool) *storagev1.StorageClass {
 	class := &storagev1.StorageClass{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
@@ -67,18 +67,12 @@ func (p *Provisioner) generateStorageClass(name string, reclaimPolicy corev1.Per
 		VolumeBindingMode:    &volumeBindingMode,
 	}
 
-	if isDefault {
-		class.Annotations = map[string]string{
-			"storageclass.kubernetes.io/is-default-class": "true",
-		}
-	}
-
 	return class
 }
 
 func (p *Provisioner) generateStorageClasses() []*storagev1.StorageClass {
 	return []*storagev1.StorageClass{
-		p.generateStorageClass("cinder", corev1.PersistentVolumeReclaimDelete, storagev1.VolumeBindingWaitForFirstConsumer, true, true),
+		p.generateStorageClass("cinder", corev1.PersistentVolumeReclaimDelete, storagev1.VolumeBindingWaitForFirstConsumer, true),
 	}
 }
 
