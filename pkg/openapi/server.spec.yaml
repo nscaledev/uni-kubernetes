@@ -684,6 +684,17 @@ components:
       minItems: 1
       items:
         $ref: '#/components/schemas/kubernetesClusterWorkloadPool'
+    kubernetesClusterFeatures:
+      description: Cluster feature flags.
+      type: object
+      required:
+      - gpuOperator
+      properties:
+        gpuOperator:
+          description: |-
+            Enables the GPU operator.
+          type: boolean
+          default: false
     kubernetesClusterSpec:
       description: Kubernetes cluster creation parameters.
       type: object
@@ -709,6 +720,8 @@ components:
           type: string
         autoUpgrade:
           $ref: '#/components/schemas/kubernetesClusterAutoUpgrade'
+        features:
+          $ref: '#/components/schemas/kubernetesClusterFeatures'
         workloadPools:
           $ref: '#/components/schemas/kubernetesClusterWorkloadPools'
         api:

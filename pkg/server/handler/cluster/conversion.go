@@ -179,6 +179,16 @@ func convertAutoUpgrade(in *unikornv1.ApplicationBundleAutoUpgradeSpec) *openapi
 	return out
 }
 
+func convertFeatures(in *unikornv1.KubernetesClusterFeaturesSpec) *openapi.KubernetesClusterFeatures {
+	if in == nil {
+		return nil
+	}
+
+	return &openapi.KubernetesClusterFeatures{
+		GpuOperator: in.GPUOperator,
+	}
+}
+
 // convert converts from a custom resource into the API definition.
 func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
 	out := &openapi.KubernetesClusterRead{
@@ -188,6 +198,7 @@ func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
 			ClusterManagerId:      &in.Spec.ClusterManagerID,
 			ApplicationBundleName: &in.Spec.ApplicationBundle,
 			AutoUpgrade:           convertAutoUpgrade(in.Spec.ApplicationBundleAutoUpgrade),
+			Features:              convertFeatures(in.Spec.Features),
 			Version:               in.Spec.Version.Original(),
 			WorkloadPools:         convertWorkloadPools(in),
 		},
@@ -562,8 +573,8 @@ func generateAutoUpgrade(request *openapi.KubernetesClusterAutoUpgrade) *unikorn
 	return out
 }
 
-// preserveDefaulted recognizes that, while we try to be opinionated and do things for
-// the end user, there are operation reasons for disabling things, and preventing surprise
+// preserveDefaultedFields recognizes that, while we try to be opinionated and do things for
+// the end user, there are operational reasons for disabling things, and preventing surprise
 // upgrades when you update a cluster.
 func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster) {
 	if g.existing == nil || g.existing.Spec.Features == nil {
@@ -571,7 +582,19 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster
 	}
 
 	cluster.Spec.Features.Autoscaling = g.existing.Spec.Features.Autoscaling
-	cluster.Spec.Features.GPUOperator = g.existing.Spec.Features.GPUOperator
+}
+
+func generateFeatures(request *openapi.KubernetesClusterFeatures) *unikornv1.KubernetesClusterFeaturesSpec {
+	out := &unikornv1.KubernetesClusterFeaturesSpec{
+		Autoscaling: true,
+		GPUOperator: false,
+	}
+
+	if request != nil {
+		out.GPUOperator = request.GpuOperator
+	}
+
+	return out
 }
 
 // generate generates the full cluster custom resource.
@@ -623,10 +646,7 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, clu
 			Network:                      *network,
 			ControlPlane:                 *kubernetesControlPlane,
 			WorkloadPools:                *kubernetesWorkloadPools,
-			Features: &unikornv1.KubernetesClusterFeaturesSpec{
-				Autoscaling: true,
-				GPUOperator: true,
-			},
+			Features:                     generateFeatures(request.Spec.Features),
 		},
 	}
 
