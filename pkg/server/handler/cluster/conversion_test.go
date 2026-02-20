@@ -473,3 +473,84 @@ func TestClusterUpgrade(t *testing.T) {
 	require.Equal(t, imageID3, cluster.Spec.WorkloadPools.Pools[0].ImageID)
 	require.Equal(t, flavorID1, cluster.Spec.WorkloadPools.Pools[0].FlavorID)
 }
+
+// TestClusterUpdatePreservesGPUOperatorWhenFeatureFieldOmitted checks that
+// sending an empty features object does not reset the existing GPU operator
+// setting.
+func TestClusterUpdatePreservesGPUOperatorWhenFeatureFieldOmitted(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	ctx = fixtures.HandlerContextFixture(ctx, fixtures.WithOrganization)
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	c := newClient(t)
+
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+
+	region := region.NewMockClientInterface(ctrl)
+	region.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(flavorFixtures(), nil)
+	region.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(imageFixtures(), nil)
+
+	existing := existingClusterFixture(t, kubernetesVersion1)
+	existing.Spec.Features = &unikornv1.KubernetesClusterFeaturesSpec{
+		Autoscaling: false,
+		GPUOperator: false,
+	}
+
+	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
+	g = cluster.WithExisting(g, existing)
+
+	request := clusterRequestFixture(kubernetesVersion1)
+	request.Spec.Features = &openapi.KubernetesClusterFeatures{}
+
+	cluster, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), request)
+	require.NoError(t, err)
+	require.NotNil(t, cluster.Spec.Features)
+	require.False(t, cluster.Spec.Features.GPUOperator)
+}
+
+// TestClusterUpdateAppliesExplicitGPUOperatorSetting checks that an explicit
+// features.gpuOperator value overrides the existing setting.
+func TestClusterUpdateAppliesExplicitGPUOperatorSetting(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	ctx = fixtures.HandlerContextFixture(ctx, fixtures.WithOrganization)
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	c := newClient(t)
+
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+
+	region := region.NewMockClientInterface(ctrl)
+	region.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(flavorFixtures(), nil)
+	region.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(imageFixtures(), nil)
+
+	existing := existingClusterFixture(t, kubernetesVersion1)
+	existing.Spec.Features = &unikornv1.KubernetesClusterFeaturesSpec{
+		Autoscaling: false,
+		GPUOperator: false,
+	}
+
+	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
+	g = cluster.WithExisting(g, existing)
+
+	request := clusterRequestFixture(kubernetesVersion1)
+	request.Spec.Features = &openapi.KubernetesClusterFeatures{
+		GpuOperator: true,
+	}
+
+	cluster, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), request)
+	require.NoError(t, err)
+	require.NotNil(t, cluster.Spec.Features)
+	require.True(t, cluster.Spec.Features.GPUOperator)
+}
