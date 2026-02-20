@@ -35,7 +35,7 @@ spec:
     parameters:
     - name: crds.enabled
       value: "true"
-  - version: v1.17.4
+  - version: v1.19.3
     repo: https://charts.jetstack.io
     chart: cert-manager
     release: cert-manager

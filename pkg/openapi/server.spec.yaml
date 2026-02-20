@@ -715,6 +715,17 @@ components:
           $ref: '#/components/schemas/kubernetesClusterAPI'
         networking:
           $ref: '#/components/schemas/kubernetesClusterNetwork'
+        features:
+          $ref: '#/components/schemas/kubernetesClusterFeatures'
+    kubernetesClusterFeatures:
+      description: Kubernetes cluster features configuration.
+      type: object
+      properties:
+        ingressController:
+          description: |-
+            Enables the Cilium ingress controller.
+            This configures Cilium to act as an ingress controller for HTTP/HTTPS traffic.
+          type: boolean
     kubernetesClusterRead:
       description: Kubernetes cluster read.
       type: object

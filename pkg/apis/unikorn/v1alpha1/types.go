@@ -195,6 +195,9 @@ type KubernetesClusterFeaturesSpec struct {
 	// This is only installed if a workload pool has a flavor that defines
 	// a valid GPU specification and vendor.
 	GPUOperator bool `json:"gpuOperator,omitempty"`
+	// IngressController enables the Cilium ingress controller.
+	// This configures Cilium to act as an ingress controller for HTTP/HTTPS traffic.
+	IngressController bool `json:"ingressController,omitempty"`
 }
 
 type KubernetesClusterWorkloadPoolsSpec struct {
