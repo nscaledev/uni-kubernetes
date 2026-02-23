@@ -258,7 +258,7 @@ publish-contracts-consumer:
 	@echo "Publishing consumer pacts to Pact Broker..."
 	@echo "Consumer Version: $(CONSUMER_VERSION)"
 	@echo "Pact Broker URL: $(PACT_BROKER_URL)"
-	docker run --rm \
+	@docker run --rm \
 		--network host \
 		-v $(PWD)/test/contracts/consumer:/consumer \
 		-w /consumer \
@@ -269,38 +269,76 @@ publish-contracts-consumer:
 		--broker-password="$(PACT_BROKER_PASSWORD)" \
 		--consumer-app-version="$(CONSUMER_VERSION)" \
 		--branch="$(BRANCH)" \
-		./*/pacts
+		./*/pacts | tee /tmp/pact-publish-output.txt
+	@if grep -q "contract_content_changed" /tmp/pact-publish-output.txt; then \
+		echo "true" > /tmp/pact-changed.flag; \
+	else \
+		echo "false" > /tmp/pact-changed.flag; \
+	fi
 
 # Alias for publishing pacts (shorter name for CI workflows)
 .PHONY: publish-pacts
 publish-pacts: publish-contracts-consumer
 
-# Can-I-Deploy check
+# Check if pact content changed (reads flag set by publish-pacts)
+.PHONY: pact-changed
+pact-changed:
+	@if [ ! -f /tmp/pact-changed.flag ]; then \
+		echo "No pact-changed flag found - assuming contract changed to be safe"; \
+		exit 0; \
+	fi; \
+	changed=$$(cat /tmp/pact-changed.flag); \
+	if [ "$$changed" = "true" ]; then \
+		echo "Pact content changed - verification will be triggered"; \
+		exit 0; \
+	else \
+		echo "Pact content unchanged - can use previous verification"; \
+		exit 1; \
+	fi
+
+# Can-I-Deploy check (smart: only waits if contract changed)
 .PHONY: can-i-deploy
 can-i-deploy:
-	@echo "Checking if $(SERVICE_NAME) version $(CONSUMER_VERSION) can be deployed to production..."
-	docker run --rm \
-		--network host \
-		pactfoundation/pact-cli:latest \
-		broker can-i-deploy \
-		--pacticipant="$(SERVICE_NAME)" \
-		--version="$(CONSUMER_VERSION)" \
-		--to-environment="production" \
-		--broker-base-url="$(PACT_BROKER_URL)" \
-		--broker-username="$(PACT_BROKER_USERNAME)" \
-		--broker-password="$(PACT_BROKER_PASSWORD)"
+	@echo "Running can-i-deploy check..."
+	@if make pact-changed 2>/dev/null; then \
+		echo ""; \
+		echo "Contract changed - waiting for provider verification..."; \
+		docker run --rm \
+			--network host \
+			pactfoundation/pact-cli:latest \
+			pact-broker can-i-deploy \
+			--pacticipant="$(SERVICE_NAME)" \
+			--version="$(CONSUMER_VERSION)" \
+			--retry-while-unknown=300 \
+			--retry-interval=10 \
+			--broker-base-url="$(PACT_BROKER_URL)" \
+			--broker-username="$(PACT_BROKER_USERNAME)" \
+			--broker-password="$(PACT_BROKER_PASSWORD)"; \
+	else \
+		echo ""; \
+		echo "Contract unchanged - running quick verification check..."; \
+		docker run --rm \
+			--network host \
+			pactfoundation/pact-cli:latest \
+			pact-broker can-i-deploy \
+			--pacticipant="$(SERVICE_NAME)" \
+			--version="$(CONSUMER_VERSION)" \
+			--broker-base-url="$(PACT_BROKER_URL)" \
+			--broker-username="$(PACT_BROKER_USERNAME)" \
+			--broker-password="$(PACT_BROKER_PASSWORD)"; \
+	fi
 
 # Record deployment
 .PHONY: record-deployment
 record-deployment:
-	@echo "Recording deployment of $(SERVICE_NAME) version $(CONSUMER_VERSION) to production..."
+	@echo "Recording deployment of $(SERVICE_NAME) version $(CONSUMER_VERSION) to development..."
 	docker run --rm \
 		--network host \
 		pactfoundation/pact-cli:latest \
 		broker record-deployment \
 		--pacticipant="$(SERVICE_NAME)" \
 		--version="$(CONSUMER_VERSION)" \
-		--environment="production" \
+		--environment="development" \
 		--broker-base-url="$(PACT_BROKER_URL)" \
 		--broker-username="$(PACT_BROKER_USERNAME)" \
 		--broker-password="$(PACT_BROKER_PASSWORD)"
