@@ -25,6 +25,7 @@ import (
 	"net"
 	"net/http"
 	"slices"
+	"time"
 
 	"github.com/spf13/pflag"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
+	"github.com/unikorn-cloud/core/pkg/util/retry"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
@@ -362,9 +364,28 @@ func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizati
 	// networks, so play it safe.  Please note that the cluster controller will
 	// automatically discover the physical network, so we don't need an annotation.
 	if region.Spec.Features.PhysicalNetworks {
-		physicalNetwork, err := c.createPhysicalNetworkOpenstack(ctx, organizationID, projectID, cluster, identity)
-		if err != nil {
-			return fmt.Errorf("%w: failed to create physical network", err)
+		// NOTE: the API is just too fast for Kubernetes, so the identity isn't
+		// visible when we make the call.  Ideally we'd just use the V2 network API
+		// which does everything and is eventually consistent, but that doesn't
+		// expose the OpenStack credentials that we need.  For now, just do a retry.
+		var physicalNetwork *regionapi.NetworkRead
+
+		rctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+		defer cancel()
+
+		callback := func() error {
+			temp, err := c.createPhysicalNetworkOpenstack(rctx, organizationID, projectID, cluster, identity)
+			if err != nil {
+				return fmt.Errorf("%w: failed to create physical network", err)
+			}
+
+			physicalNetwork = temp
+
+			return nil
+		}
+
+		if err := retry.Forever().DoWithContext(rctx, callback); err != nil {
+			return err
 		}
 
 		cluster.Annotations[constants.PhysicalNetworkAnnotation] = physicalNetwork.Metadata.Id
