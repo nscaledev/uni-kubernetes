@@ -474,10 +474,10 @@ func TestClusterUpgrade(t *testing.T) {
 	require.Equal(t, flavorID1, cluster.Spec.WorkloadPools.Pools[0].FlavorID)
 }
 
-// TestClusterUpdatePreservesGPUOperatorWhenFeatureFieldOmitted checks that
-// sending an empty features object does not reset the existing GPU operator
+// TestClusterUpdatePreservesHardwareEnablementWhenFeatureFieldOmitted checks that
+// sending an empty features object resets the existing hardware enablement
 // setting.
-func TestClusterUpdatePreservesGPUOperatorWhenFeatureFieldOmitted(t *testing.T) {
+func TestClusterUpdatePreservesHardwareEnablementWhenFeatureFieldOmitted(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
@@ -499,7 +499,7 @@ func TestClusterUpdatePreservesGPUOperatorWhenFeatureFieldOmitted(t *testing.T) 
 	existing := existingClusterFixture(t, kubernetesVersion1)
 	existing.Spec.Features = &unikornv1.KubernetesClusterFeaturesSpec{
 		Autoscaling: false,
-		GPUOperator: false,
+		GPUOperator: true,
 	}
 
 	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
@@ -514,9 +514,9 @@ func TestClusterUpdatePreservesGPUOperatorWhenFeatureFieldOmitted(t *testing.T) 
 	require.False(t, cluster.Spec.Features.GPUOperator)
 }
 
-// TestClusterUpdateAppliesExplicitGPUOperatorSetting checks that an explicit
-// features.gpuOperator value overrides the existing setting.
-func TestClusterUpdateAppliesExplicitGPUOperatorSetting(t *testing.T) {
+// TestClusterUpdateAppliesExplicitHardwareEnablementSetting checks that an explicit
+// features.hardwareEnablement value overrides the existing setting.
+func TestClusterUpdateAppliesExplicitHardwareEnablementSetting(t *testing.T) {
 	t.Parallel()
 
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
@@ -546,7 +546,7 @@ func TestClusterUpdateAppliesExplicitGPUOperatorSetting(t *testing.T) {
 
 	request := clusterRequestFixture(kubernetesVersion1)
 	request.Spec.Features = &openapi.KubernetesClusterFeatures{
-		GpuOperator: true,
+		HardwareEnablement: true,
 	}
 
 	cluster, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), request)

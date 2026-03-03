@@ -688,11 +688,12 @@ components:
       description: Cluster feature flags.
       type: object
       required:
-      - gpuOperator
+      - hardwareEnablement
       properties:
-        gpuOperator:
+        hardwareEnablement:
           description: |-
-            Enables the GPU operator.
+            Enables and hardware operators and drivers for the cluster e.g.
+            GPU operator, network configuration, etc.
           type: boolean
           default: false
     kubernetesClusterSpec:
