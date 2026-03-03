@@ -185,7 +185,7 @@ func convertFeatures(in *unikornv1.KubernetesClusterFeaturesSpec) *openapi.Kuber
 	}
 
 	return &openapi.KubernetesClusterFeatures{
-		GpuOperator: in.GPUOperator,
+		HardwareEnablement: in.GPUOperator,
 	}
 }
 
@@ -591,7 +591,7 @@ func generateFeatures(request *openapi.KubernetesClusterFeatures) *unikornv1.Kub
 	}
 
 	if request != nil {
-		out.GPUOperator = request.GpuOperator
+		out.GPUOperator = request.HardwareEnablement
 	}
 
 	return out

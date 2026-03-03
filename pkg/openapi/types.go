@@ -122,8 +122,9 @@ type KubernetesClusterAutoscaling struct {
 
 // KubernetesClusterFeatures Cluster feature flags.
 type KubernetesClusterFeatures struct {
-	// GpuOperator Enables the GPU operator.
-	GpuOperator bool `json:"gpuOperator"`
+	// HardwareEnablement Enables and hardware operators and drivers for the cluster e.g.
+	// GPU operator, network configuration, etc.
+	HardwareEnablement bool `json:"hardwareEnablement"`
 }
 
 // KubernetesClusterNetwork A Kubernetes cluster network settings.
