@@ -305,7 +305,7 @@ var _ = Describe("Region Service Contract", func() {
 								"organizationId":     matchers.UUID(),
 								"projectId":          matchers.UUID(),
 								"creationTime":       matchers.Timestamp(),
-								"provisioningStatus": matchers.String("unknown"),
+								"provisioningStatus": matchers.String("pending"),
 							},
 							"spec": map[string]interface{}{
 								"regionId": matchers.UUID(),
@@ -474,7 +474,7 @@ var _ = Describe("Region Service Contract", func() {
 								"organizationId":     matchers.UUID(),
 								"projectId":          matchers.UUID(),
 								"creationTime":       matchers.Timestamp(),
-								"provisioningStatus": matchers.String("unknown"),
+								"provisioningStatus": matchers.String("pending"),
 							},
 							"spec": map[string]interface{}{
 								"prefix":         matchers.String("192.168.0.0/24"),
