@@ -72,6 +72,19 @@ jobs:
           --broker-username="${{ vars.PACT_BROKER_USERNAME }}" \
           --broker-password="${{ secrets.PACT_BROKER_PASSWORD }}"
 
+    - name: Set Main Branch
+      run: |
+        docker run --rm \
+          --network host \
+          pactfoundation/pact-cli:latest \
+          pact-broker create-or-update-version \
+          --pacticipant="uni-kubernetes" \
+          --version="${{ steps.get_version.outputs.version }}" \
+          --branch="main" \
+          --broker-base-url="${{ vars.PACT_BROKER_URL_DEV }}" \
+          --broker-username="${{ vars.PACT_BROKER_USERNAME }}" \
+          --broker-password="${{ secrets.PACT_BROKER_PASSWORD }}"
+
     - name: Record Deployment
       run: |
         docker run --rm \
