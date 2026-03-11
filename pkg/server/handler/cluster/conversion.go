@@ -189,6 +189,14 @@ func convertFeatures(in *unikornv1.KubernetesClusterFeaturesSpec) *openapi.Kuber
 	}
 }
 
+// convertControlPlane converts the control plane from a custom resource into the API definition.
+func convertControlPlane(in *unikornv1core.MachineGeneric) *openapi.KubernetesClusterControlPlane {
+	return &openapi.KubernetesClusterControlPlane{
+		FlavorId: in.FlavorID,
+		Replicas: &in.Replicas,
+	}
+}
+
 // convert converts from a custom resource into the API definition.
 func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
 	out := &openapi.KubernetesClusterRead{
@@ -199,6 +207,7 @@ func convert(in *unikornv1.KubernetesCluster) *openapi.KubernetesClusterRead {
 			ApplicationBundleName: &in.Spec.ApplicationBundle,
 			AutoUpgrade:           convertAutoUpgrade(in.Spec.ApplicationBundleAutoUpgrade),
 			Features:              convertFeatures(in.Spec.Features),
+			ControlPlane:          convertControlPlane(&in.Spec.ControlPlane),
 			Version:               in.Spec.Version.Original(),
 			WorkloadPools:         convertWorkloadPools(in),
 		},
@@ -447,6 +456,23 @@ func (g *generator) generateControlPlane(ctx context.Context, request *openapi.K
 
 		machineOptions.Replicas = &g.existing.Spec.ControlPlane.Replicas
 		machineOptions.FlavorId = &g.existing.Spec.ControlPlane.FlavorID
+	}
+
+	// If the user has explicitly specified control plane topology, use it.
+	if request.Spec.ControlPlane != nil {
+		cp := request.Spec.ControlPlane
+
+		replicas := 3
+		if cp.Replicas != nil {
+			replicas = *cp.Replicas
+		}
+
+		if replicas%2 == 0 {
+			return nil, errors.OAuth2InvalidRequest("control plane replicas must be an odd number")
+		}
+
+		machineOptions.FlavorId = &cp.FlavorId
+		machineOptions.Replicas = &replicas
 	}
 
 	// Add in any missing defaults.
