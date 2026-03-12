@@ -206,6 +206,28 @@ See the [monitoring & logging](docs/monitoring.md) documentation from more infor
 
 Consult the [server API documentation](pkg/server/README.md) to get started.
 
+## CI / Workflows
+
+### Contract Testing Escape Hatch
+
+The `ConsumerContractTests` and `CanIDeploy` jobs run on every PR to validate Pact consumer contracts against the broker.
+
+In an emergency (e.g. hotfix where contracts need updating but can't block the merge), these jobs can be bypassed by applying the **`skip-contract-tests`** label to the PR.
+
+| Scenario | ConsumerContractTests | CanIDeploy |
+|---|---|---|
+| Normal PR (no label) | runs | runs |
+| PR with `skip-contract-tests` label | skipped | skipped |
+
+Skipped jobs show as neutral (green) in GitHub, satisfying required status checks. The label is auditable — GitHub records who added it and when.
+
+**The label must be created once in repo settings:**
+- Name: `skip-contract-tests`
+- Color: `#e11d48` (red — visually alarming to discourage casual use)
+- Description: `Emergency: bypass pact contract tests. Use only when tests need updating but can't block a hotfix.`
+
+The workflow also triggers on the `labeled` event, so adding the label to an existing PR immediately re-runs the workflow with the jobs skipped (no need to push a new commit).
+
 ## Development
 
 Consult the [developer documentation](DEVELOPER.md) for local development instructions.

@@ -6,6 +6,7 @@ on:
     - synchronize
     - reopened
     - ready_for_review
+    - labeled
 permissions:
   contents: write
 jobs:
@@ -64,6 +65,7 @@ jobs:
         CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
   ConsumerContractTests:
     runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-contract-tests') }}
     outputs:
       pact_changed: ${{ steps.publish.outputs.pact_changed }}
     steps:
@@ -109,6 +111,7 @@ jobs:
   CanIDeploy:
     needs: ConsumerContractTests
     runs-on: ubuntu-latest
+    if: needs.ConsumerContractTests.result == 'success'
     steps:
     - name: Checkout
       uses: actions/checkout@v4
