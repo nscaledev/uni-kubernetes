@@ -32,6 +32,7 @@ import (
 	"github.com/unikorn-cloud/core/pkg/provisioners"
 	"github.com/unikorn-cloud/core/pkg/provisioners/remotecluster"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
@@ -159,6 +160,15 @@ var _ provisioners.ManagerProvisioner = &Provisioner{}
 
 func (p *Provisioner) Object() unikornv1core.ManagableResourceInterface {
 	return &p.cluster
+}
+
+func (p *Provisioner) identityClient(ctx context.Context) (identityapi.ClientWithResponsesInterface, error) {
+	client, err := coreclient.FromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return identityclient.New(client, p.options.identityOptions, &p.options.clientOptions).ControllerClient(ctx, &p.cluster)
 }
 
 // getRegionClient returns an authenticated context with a client credentials access token
@@ -297,5 +307,19 @@ func (p *Provisioner) Deprovision(ctx context.Context) error {
 	}
 
 	// TODO: we need to free any allocated nodes here.
+	cli, err := coreclient.FromContext(ctx)
+	if err != nil {
+		return err
+	}
+
+	identity, err := p.identityClient(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err := identityclient.NewAllocations(cli, identity).Delete(ctx, &p.cluster); err != nil {
+		return err
+	}
+
 	return nil
 }
