@@ -696,6 +696,25 @@ components:
             GPU operator, network configuration, etc.
           type: boolean
           default: false
+    kubernetesClusterControlPlane:
+      description: |-
+        Defines explicit control plane topology. When not specified, the platform
+        will automatically select an appropriate flavor.
+      type: object
+      required:
+      - flavorId
+      properties:
+        flavorId:
+          description: Flavor ID for control plane nodes.
+          type: string
+          minLength: 1
+        replicas:
+          description: |-
+            Number of control plane replicas. Must be an odd number to
+            maintain quorum. Defaults to 3 if not specified.
+          type: integer
+          minimum: 1
+          default: 3
     kubernetesClusterSpec:
       description: Kubernetes cluster creation parameters.
       type: object
@@ -723,6 +742,8 @@ components:
           $ref: '#/components/schemas/kubernetesClusterAutoUpgrade'
         features:
           $ref: '#/components/schemas/kubernetesClusterFeatures'
+        controlPlane:
+          $ref: '#/components/schemas/kubernetesClusterControlPlane'
         workloadPools:
           $ref: '#/components/schemas/kubernetesClusterWorkloadPools'
         api:

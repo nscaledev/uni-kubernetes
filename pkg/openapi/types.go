@@ -113,6 +113,17 @@ type KubernetesClusterAutoUpgradeWindow struct {
 	Start int `json:"start"`
 }
 
+// KubernetesClusterControlPlane Defines explicit control plane topology. When not specified, the platform
+// will automatically select an appropriate flavor.
+type KubernetesClusterControlPlane struct {
+	// FlavorId Flavor ID for control plane nodes.
+	FlavorId string `json:"flavorId"`
+
+	// Replicas Number of control plane replicas. Must be an odd number to
+	// maintain quorum. Defaults to 3 if not specified.
+	Replicas *int `json:"replicas,omitempty"`
+}
+
 // KubernetesClusterAutoscaling A Kubernetes cluster workload pool autoscaling configuration. Cluster autoscaling
 // must also be enabled in the cluster features.
 type KubernetesClusterAutoscaling struct {
@@ -169,6 +180,10 @@ type KubernetesClusterSpec struct {
 	// ClusterManagerId The name of the cluster manager to use, if one is not specified
 	// the system will create one for you.
 	ClusterManagerId *string `json:"clusterManagerId,omitempty"`
+
+	// ControlPlane Defines explicit control plane topology. When not specified, the platform
+	// will automatically select an appropriate flavor.
+	ControlPlane *KubernetesClusterControlPlane `json:"controlPlane,omitempty"`
 
 	// Features Cluster feature flags.
 	Features *KubernetesClusterFeatures `json:"features,omitempty"`
