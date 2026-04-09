@@ -53,6 +53,20 @@ spec:
     parameters:
     - name: crds.enabled
       value: "true"
+  - version: v1.20.1
+    repo: https://charts.jetstack.io
+    chart: cert-manager
+    release: cert-manager
+    namespace: cert-manager
+    createNamespace: true
+    parameters:
+    - name: crds.enabled
+      value: "true"
+    - name: prometheus.enabled
+      value: true
+    - name: prometheus.servicemonitor.enabled
+      value: true
+
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
