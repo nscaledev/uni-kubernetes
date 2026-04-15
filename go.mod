@@ -16,9 +16,9 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
-	github.com/unikorn-cloud/core v1.14.0-rc1.0.20260409152316-fa69a2543e80
-	github.com/unikorn-cloud/identity v1.14.0-rc1.0.20260409153424-5519aff0d80f
-	github.com/unikorn-cloud/region v1.15.0-pre1.0.20260409154909-f2e4c9c6f72c
+	github.com/unikorn-cloud/core v1.14.0-rc1.0.20260415101853-f48436d47c7a
+	github.com/unikorn-cloud/identity v1.14.0-rc1.0.20260415125328-4be4f9714606
+	github.com/unikorn-cloud/region v1.15.0-pre1.0.20260415130724-acebc1bbab87
 	go.uber.org/mock v0.5.2
 	gopkg.in/ini.v1 v1.67.0
 	k8s.io/api v0.33.1
