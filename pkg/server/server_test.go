@@ -31,6 +31,7 @@ import (
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/middleware/authorization"
 	openapimiddleware "github.com/unikorn-cloud/identity/pkg/middleware/openapi"
+	openapimiddlewarepassport "github.com/unikorn-cloud/identity/pkg/middleware/openapi/passport"
 	identityopenapi "github.com/unikorn-cloud/identity/pkg/openapi"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -91,12 +92,12 @@ func TestServer_Authorizer(t *testing.T) {
 			return httpClient, nil
 		}
 
-		server.newAuthorizer = func(httpClientArg *http.Client, identityHost string, uniAuthorizerArg openapimiddleware.Authorizer) (openapimiddleware.Authorizer, error) {
+		server.newAuthorizer = func(verifierArg *openapimiddlewarepassport.Verifier, uniAuthorizerArg openapimiddleware.Authorizer, tokenExchangeArg openapimiddlewarepassport.TokenExchange) (openapimiddleware.Authorizer, error) {
 			calledAuthorizer = true
 
-			assert.Same(t, httpClient, httpClientArg)
-			assert.Equal(t, server.IdentityOptions.Host(), identityHost)
+			assert.NotNil(t, verifierArg)
 			assert.Same(t, uniAuthorizer, uniAuthorizerArg)
+			assert.NotNil(t, tokenExchangeArg)
 
 			return stub, nil
 		}
@@ -162,7 +163,7 @@ func TestServer_Authorizer(t *testing.T) {
 			return &http.Client{}, nil
 		}
 
-		s.newAuthorizer = func(_ *http.Client, _ string, _ openapimiddleware.Authorizer) (openapimiddleware.Authorizer, error) {
+		s.newAuthorizer = func(_ *openapimiddlewarepassport.Verifier, _ openapimiddleware.Authorizer, _ openapimiddlewarepassport.TokenExchange) (openapimiddleware.Authorizer, error) {
 			return nil, errTestAuthorizer
 		}
 
