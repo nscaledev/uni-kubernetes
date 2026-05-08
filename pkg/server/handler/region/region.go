@@ -22,20 +22,14 @@ import (
 	"errors"
 	"net/http"
 	"slices"
-	"time"
 
 	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
-	"github.com/unikorn-cloud/core/pkg/util/cache"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
 var (
 	ErrUnhandled = errors.New("unhandled case")
-)
-
-const (
-	defaultCacheSize = 4096
 )
 
 // regionTypeFilter creates a filter for use with DeleteFunc that selects regions
@@ -51,12 +45,9 @@ func regionTypeFilter(t openapi.RegionTypeParameter) (func(regionapi.RegionRead)
 	return nil, ErrUnhandled
 }
 
-// Client provides a caching layer for retrieval of region assets, and lazy population.
+// Client provides retrieval of region assets from the region API.
 type Client struct {
-	client      regionapi.ClientWithResponsesInterface
-	regionCache *cache.LRUExpireCache[string, []regionapi.RegionRead]
-	flavorCache *cache.LRUExpireCache[string, []regionapi.Flavor]
-	imageCache  *cache.LRUExpireCache[string, []regionapi.Image]
+	client regionapi.ClientWithResponsesInterface
 }
 
 var _ ClientInterface = &Client{}
@@ -64,10 +55,7 @@ var _ ClientInterface = &Client{}
 // New returns a new client.
 func New(client regionapi.ClientWithResponsesInterface) *Client {
 	return &Client{
-		client:      client,
-		regionCache: cache.NewLRUExpireCache[string, []regionapi.RegionRead](defaultCacheSize),
-		flavorCache: cache.NewLRUExpireCache[string, []regionapi.Flavor](defaultCacheSize),
-		imageCache:  cache.NewLRUExpireCache[string, []regionapi.Image](defaultCacheSize),
+		client: client,
 	}
 }
 
@@ -93,10 +81,6 @@ func (c *Client) Get(ctx context.Context, organizationID, regionID string) (*reg
 }
 
 func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.RegionRead, error) {
-	if regions, ok := c.regionCache.Get(organizationID); ok {
-		return regions, nil
-	}
-
 	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
 	if err != nil {
 		return nil, err
@@ -107,8 +91,6 @@ func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.R
 	}
 
 	regions := *resp.JSON200
-
-	c.regionCache.Add(organizationID, regions, time.Hour)
 
 	return regions, nil
 }
@@ -130,12 +112,6 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 
 // Flavors returns all Kubernetes compatible flavors.
 func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) ([]regionapi.Flavor, error) {
-	cacheKey := organizationID + ":" + regionID
-
-	if flavors, ok := c.flavorCache.Get(cacheKey); ok {
-		return flavors, nil
-	}
-
 	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
@@ -152,19 +128,11 @@ func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) (
 		return x.Spec.Cpus < 2 || x.Spec.Memory < 2
 	})
 
-	c.flavorCache.Add(cacheKey, flavors, time.Hour)
-
 	return flavors, nil
 }
 
 // Images returns all Kubernetes compatible images.
 func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([]regionapi.Image, error) {
-	cacheKey := organizationID + ":" + regionID
-
-	if images, ok := c.imageCache.Get(cacheKey); ok {
-		return images, nil
-	}
-
 	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
@@ -179,8 +147,6 @@ func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([
 	images = slices.DeleteFunc(images, func(x regionapi.Image) bool {
 		return x.Spec.SoftwareVersions == nil || (*x.Spec.SoftwareVersions)["kubernetes"] == ""
 	})
-
-	c.imageCache.Add(cacheKey, images, time.Hour)
 
 	return images, nil
 }
