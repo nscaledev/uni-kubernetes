@@ -17,7 +17,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/stretchr/testify v1.11.1
 	github.com/unikorn-cloud/core v1.14.0-rc1.0.20260415101853-f48436d47c7a
-	github.com/unikorn-cloud/identity v1.14.0-rc1.0.20260415125328-4be4f9714606
+	github.com/unikorn-cloud/identity v1.16.1
 	github.com/unikorn-cloud/region v1.15.0-pre1.0.20260415130724-acebc1bbab87
 	go.uber.org/mock v0.5.2
 	gopkg.in/ini.v1 v1.67.0
