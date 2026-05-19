@@ -113,6 +113,13 @@ type KubernetesClusterAutoUpgradeWindow struct {
 	Start int `json:"start"`
 }
 
+// KubernetesClusterAutoscaling A Kubernetes cluster workload pool autoscaling configuration. Cluster autoscaling
+// must also be enabled in the cluster features.
+type KubernetesClusterAutoscaling struct {
+	// MinimumReplicas The minimum number of replicas to allow. Must be less than the maximum.
+	MinimumReplicas int `json:"minimumReplicas"`
+}
+
 // KubernetesClusterControlPlane Defines explicit control plane topology. When not specified, the platform
 // will automatically select an appropriate flavor.
 type KubernetesClusterControlPlane struct {
@@ -122,13 +129,6 @@ type KubernetesClusterControlPlane struct {
 	// Replicas Number of control plane replicas. Must be an odd number to
 	// maintain quorum. Defaults to 3 if not specified.
 	Replicas *int `json:"replicas,omitempty"`
-}
-
-// KubernetesClusterAutoscaling A Kubernetes cluster workload pool autoscaling configuration. Cluster autoscaling
-// must also be enabled in the cluster features.
-type KubernetesClusterAutoscaling struct {
-	// MinimumReplicas The minimum number of replicas to allow. Must be less than the maximum.
-	MinimumReplicas int `json:"minimumReplicas"`
 }
 
 // KubernetesClusterFeatures Cluster feature flags.
