@@ -53,7 +53,7 @@ import (
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/clusteropenstack"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/gatewayapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/metricsserver"
-	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/nvidiagpuoperator"
+	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/nvidiahwe"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackcloudprovider"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackplugincindercsi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/vcluster"
@@ -159,10 +159,6 @@ func (a *ApplicationReferenceGetter) metricsServer(ctx context.Context) (*unikor
 	return a.getApplication(ctx, "metrics-server")
 }
 
-func (a *ApplicationReferenceGetter) nvidiaGPUOperator(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
-	return a.getApplication(ctx, "nvidia-gpu-operator")
-}
-
 func (a *ApplicationReferenceGetter) certManager(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
 	return a.getApplication(ctx, "cert-manager")
 }
@@ -181,6 +177,10 @@ func (a *ApplicationReferenceGetter) clusterAutoscalerOpenstack(ctx context.Cont
 
 func (a *ApplicationReferenceGetter) gatewayAPI(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
 	return a.getApplication(ctx, "gateway-api-crds")
+}
+
+func (a *ApplicationReferenceGetter) nvidiaHardwareEnablement(ctx context.Context) (*unikornv1core.HelmApplication, *unikornv1core.SemanticVersion, error) {
+	return a.getApplication(ctx, "nvidia-hardware-enablement")
 }
 
 // Options allows access to CLI options in the provisioner.
@@ -364,10 +364,6 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 	addOnsApplications := []provisioners.Provisioner{
 		openstackplugincindercsi.New(apps.openstackPluginCinderCSI, options),
 		metricsserver.New(apps.metricsServer),
-		conditional.New("nvidia-gpu-operator",
-			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorNvidia },
-			nvidiagpuoperator.New(apps.nvidiaGPUOperator),
-		),
 		conditional.New("cert-manager",
 			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorAMD },
 			certmanager.New(apps.certManager),
@@ -377,6 +373,13 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 			amdgpuoperator.New(apps.amdGPUOperator),
 		),
 	}
+
+	addOnsApplications = append(addOnsApplications,
+		conditional.New("nvidia-hardware-enablement",
+			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorNvidia },
+			nvidiahwe.New(apps.nvidiaHardwareEnablement),
+		),
+	)
 
 	// TODO: remove this conditional when smaller versions are all retired.
 	if bundle.Spec.Version.Version.Compare(semver.MustParse("v1.3.0")) >= 0 {

@@ -1,6 +1,4 @@
 /*
-Copyright 2022-2024 EscherCloud.
-Copyright 2024-2025 the Unikorn Authors.
 Copyright 2026 Nscale.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package nvidiagpuoperator
+package nvidiahwe
 
 import (
 	"context"
@@ -38,32 +36,42 @@ type Provisioner struct{}
 // Ensure the Provisioner interface is implemented.
 var _ application.ValuesGenerator = &Provisioner{}
 
-// Generate implements the application.Generator interface.
+// Values implements the application.ValuesGenerator interface.
 func (p *Provisioner) Values(ctx context.Context, version unikornv1core.SemanticVersion) (any, error) {
-	// The default affinity is broken and prevents scale to zero, also tolerations
-	// don't allow execution using our default taints.
-	// TODO: This includes the node-feature-discovery as a subchart, and doesn't expose
-	// node selectors/tolerations, however, it does scale to zero.
 	values := map[string]any{
-		"operator": map[string]any{
-			"affinity": map[string]any{
-				"nodeAffinity": map[string]any{
-					"preferredDuringSchedulingIgnoredDuringExecution": nil,
-					"requiredDuringSchedulingIgnoredDuringExecution": map[string]any{
-						"nodeSelectorTerms": []any{
-							map[string]any{
-								"matchExpressions": []any{
-									map[string]any{
-										"key":      "node-role.kubernetes.io/control-plane",
-										"operator": "Exists",
+		// The NFD garbage collector is a Deployment and has no tolerations in the
+		// chart defaults, so it needs explicit control-plane tolerations to allow
+		// it to schedule before worker nodes are available.
+		"node-feature-discovery": map[string]any{
+			"gc": map[string]any{
+				"tolerations": util.ControlPlaneTolerations(),
+			},
+		},
+		// The GPU operator Deployment itself needs to be pinned to control-plane
+		// nodes and tolerate their taints, consistent with the standalone
+		// nvidia-gpu-operator provisioner.  Daemonsets already use operator:Exists
+		// tolerations in the chart defaults so those require no override.
+		"gpu-operator": map[string]any{
+			"operator": map[string]any{
+				"affinity": map[string]any{
+					"nodeAffinity": map[string]any{
+						"preferredDuringSchedulingIgnoredDuringExecution": nil,
+						"requiredDuringSchedulingIgnoredDuringExecution": map[string]any{
+							"nodeSelectorTerms": []any{
+								map[string]any{
+									"matchExpressions": []any{
+										map[string]any{
+											"key":      "node-role.kubernetes.io/control-plane",
+											"operator": "Exists",
+										},
 									},
 								},
 							},
 						},
 					},
 				},
+				"tolerations": util.ControlPlaneTolerations(),
 			},
-			"tolerations": util.ControlPlaneTolerations(),
 		},
 	}
 
