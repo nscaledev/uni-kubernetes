@@ -290,21 +290,42 @@ func (g *generator) defaultControlPlaneFlavor(ctx context.Context, request *open
 	return &flavors[len(flavors)-1], nil
 }
 
+// flavorByID returns the flavor with the given ID from the region.
+func (g *generator) flavorByID(ctx context.Context, request *openapi.KubernetesClusterWrite, id string) (*regionapi.Flavor, error) {
+	flavors, err := g.region.Flavors(ctx, g.organizationID, request.Spec.RegionId)
+	if err != nil {
+		return nil, fmt.Errorf("%w: failed to list flavors", err)
+	}
+
+	index := slices.IndexFunc(flavors, func(x regionapi.Flavor) bool {
+		return x.Metadata.Id == id
+	})
+
+	if index < 0 {
+		return nil, fmt.Errorf("%w: flavor %s not found", coreerrors.ErrConsistency, id)
+	}
+
+	return &flavors[index], nil
+}
+
 // defaultImage returns a default image for either control planes or workload pools
-// based on the specified Kubernetes version.
-func (g *generator) defaultImage(ctx context.Context, request *openapi.KubernetesClusterWrite) (*regionapi.Image, error) {
+// based on the specified Kubernetes version and CPU architecture.
+func (g *generator) defaultImage(ctx context.Context, request *openapi.KubernetesClusterWrite, arch regionapi.Architecture) (*regionapi.Image, error) {
 	images, err := g.region.Images(ctx, g.organizationID, request.Spec.RegionId)
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to list images", err)
 	}
 
-	// Only get the version asked for.
 	images = slices.DeleteFunc(images, func(x regionapi.Image) bool {
 		if x.Spec.SoftwareVersions == nil {
 			return true
 		}
 
-		return (*x.Spec.SoftwareVersions)["kubernetes"] != request.Spec.Version
+		if (*x.Spec.SoftwareVersions)["kubernetes"] != request.Spec.Version {
+			return true
+		}
+
+		return x.Spec.Architecture != arch
 	})
 
 	if len(images) == 0 {
@@ -315,13 +336,13 @@ func (g *generator) defaultImage(ctx context.Context, request *openapi.Kubernete
 }
 
 // imageID returns an existing image ID if one is available, and the Kubernetes version
-// has not changed, otherwise the newest image for the given version.
-func (g *generator) imageID(ctx context.Context, request *openapi.KubernetesClusterWrite, imageID *string) (*string, error) {
+// has not changed, otherwise the newest image for the given version and architecture.
+func (g *generator) imageID(ctx context.Context, request *openapi.KubernetesClusterWrite, imageID *string, arch regionapi.Architecture) (*string, error) {
 	if imageID != nil && request.Spec.Version == g.existing.Spec.Version.Original() {
 		return imageID, nil
 	}
 
-	image, err := g.defaultImage(ctx, request)
+	image, err := g.defaultImage(ctx, request, arch)
 	if err != nil {
 		return nil, err
 	}
@@ -422,7 +443,12 @@ func (g *generator) generateMachineGeneric(ctx context.Context, request *openapi
 		FlavorID: *m.FlavorId,
 	}
 
-	imageID, err := g.imageID(ctx, request, imageID)
+	flavor, err := g.flavorByID(ctx, request, *m.FlavorId)
+	if err != nil {
+		return nil, err
+	}
+
+	imageID, err = g.imageID(ctx, request, imageID, flavor.Spec.Architecture)
 	if err != nil {
 		return nil, err
 	}
