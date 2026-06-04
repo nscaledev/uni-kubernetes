@@ -97,15 +97,16 @@ func applicationBundleFixture(t *testing.T, version string, namespace, name stri
 	}
 }
 
-func flavorFixture(id string, cpus, memory, disk int) *regionapi.Flavor {
+func flavorFixture(id string, cpus, memory, disk int, arch regionapi.Architecture) *regionapi.Flavor {
 	return &regionapi.Flavor{
 		Metadata: coreapi.StaticResourceMetadata{
 			Id: id,
 		},
 		Spec: regionapi.FlavorSpec{
-			Cpus:   cpus,
-			Memory: memory,
-			Disk:   disk,
+			Cpus:         cpus,
+			Memory:       memory,
+			Disk:         disk,
+			Architecture: arch,
 		},
 	}
 }
@@ -122,18 +123,19 @@ func flavorFixtureList(in ...*regionapi.Flavor) regionapi.Flavors {
 
 func flavorFixtures() regionapi.Flavors {
 	return flavorFixtureList(
-		flavorFixture(flavorID1, 2, 2, 10),
-		flavorFixture(flavorID2, 4, 4, 20),
+		flavorFixture(flavorID1, 2, 2, 10, regionapi.ArchitectureX8664),
+		flavorFixture(flavorID2, 4, 4, 20, regionapi.ArchitectureX8664),
 	)
 }
 
-func imageFixture(id, version string) *regionapi.Image {
+func imageFixture(id, version string, arch regionapi.Architecture) *regionapi.Image {
 	return &regionapi.Image{
 		Metadata: coreapi.StaticResourceMetadata{
 			Id: id,
 		},
 		Spec: regionapi.ImageSpec{
-			SizeGiB: 10,
+			SizeGiB:      10,
+			Architecture: arch,
 			SoftwareVersions: &regionapi.SoftwareVersions{
 				"kubernetes": version,
 			},
@@ -153,9 +155,9 @@ func imageFixtureList(in ...*regionapi.Image) regionapi.Images {
 
 func imageFixtures() regionapi.Images {
 	return imageFixtureList(
-		imageFixture(imageID1, kubernetesVersion1),
-		imageFixture(imageID2, kubernetesVersion2),
-		imageFixture(imageID3, kubernetesVersion3),
+		imageFixture(imageID1, kubernetesVersion1, regionapi.ArchitectureX8664),
+		imageFixture(imageID2, kubernetesVersion2, regionapi.ArchitectureX8664),
+		imageFixture(imageID3, kubernetesVersion3, regionapi.ArchitectureX8664),
 	)
 }
 
@@ -512,6 +514,58 @@ func TestClusterUpdatePreservesHardwareEnablementWhenFeatureFieldOmitted(t *test
 	require.NoError(t, err)
 	require.NotNil(t, cluster.Spec.Features)
 	require.False(t, cluster.Spec.Features.GPUOperator)
+}
+
+// TestClusterGenerateSelectsImageMatchingFlavorArchitecture checks that when a region
+// exposes images for multiple architectures, the image selected matches the flavor's
+// architecture rather than returning an arbitrary first match.
+func TestClusterGenerateSelectsImageMatchingFlavorArchitecture(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+
+	ctx = fixtures.HandlerContextFixture(ctx, fixtures.WithOrganization)
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	c := newClient(t)
+
+	appclient := applicationbundle.NewClient(c, defaultNamespace)
+
+	// flavorID1 is arm64; flavorID2 is x86_64.
+	mixedFlavors := flavorFixtureList(
+		flavorFixture(flavorID1, 2, 2, 10, regionapi.ArchitectureAarch64),
+		flavorFixture(flavorID2, 4, 4, 20, regionapi.ArchitectureX8664),
+	)
+
+	// Two images for the same k8s version: one per architecture.
+	mixedImages := imageFixtureList(
+		imageFixture(imageID1, kubernetesVersion2, regionapi.ArchitectureX8664),
+		imageFixture(imageID2, kubernetesVersion2, regionapi.ArchitectureAarch64),
+	)
+
+	r := region.NewMockClientInterface(ctrl)
+	r.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(mixedFlavors, nil)
+	r.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(mixedImages, nil)
+
+	// Request uses flavorID1 (arm64) for the workload pool.
+	request := clusterRequestFixture(kubernetesVersion2)
+
+	g := cluster.NewGenerator(c, newGeneratorOptions(), r, defaultNamespace, organizationID, projectID)
+
+	result, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), request)
+	require.NoError(t, err)
+
+	// Control plane auto-selects a flavor; with the size constraints (CPUs ≤ 2, memory ≤ 10)
+	// flavorID1 (arm64, 2 CPU / 2 GiB) is the only candidate, so the control plane image
+	// must be the arm64 one.
+	require.Equal(t, imageID2, result.Spec.ControlPlane.ImageID)
+
+	// The workload pool explicitly uses flavorID1 (arm64) so it must also get imageID2.
+	require.Len(t, result.Spec.WorkloadPools.Pools, 1)
+	require.Equal(t, imageID2, result.Spec.WorkloadPools.Pools[0].ImageID)
 }
 
 // TestClusterUpdateAppliesExplicitHardwareEnablementSetting checks that an explicit
