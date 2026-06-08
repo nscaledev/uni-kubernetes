@@ -4,7 +4,11 @@ on:
     branches-ignore:
     - '**'
     tags:
-    - '*'
+      # Exclude nightly pseudo-version tags (v0.0.0-*) precisely rather than
+      # using v[1-9]*, which would silently drop legitimate v0.x.y releases.
+      - 'v*'
+      - '!v0.0.0'
+      - '!v0.0.0-*'
 permissions:
   contents: write
   packages: write
@@ -14,10 +18,53 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-    - name: checkout
-      uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
+    - name: Validate tag
+      run: |
+        TAG="${GITHUB_REF_NAME}"
+        # Strict semver: vX.Y.Z or vX.Y.Z-pre (alphanumeric, dots, hyphens only).
+        # This rejects build metadata (+), path traversal, sed metacharacters, and
+        # anything else that could corrupt the sed interpolation in the patch step.
+        if [[ ! "${TAG}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?$ ]]; then
+          echo "ERROR: tag '${TAG}' is not valid semver (expected vX.Y.Z or vX.Y.Z-pre)"
+          exit 1
+        fi
+        if [[ "${TAG}" == "v0.0.0" || "${TAG}" == v0.0.0-* ]]; then
+          echo "ERROR: tags matching v0.0.0 or v0.0.0-* are reserved for nightly builds"
+          exit 1
+        fi
+    - name: Derive chart version
+      run: |
+        CHART_VERSION="${GITHUB_REF_NAME#v}"
+        REPO=$(cut -d'/' -f2 <<< "$GITHUB_REPOSITORY")
+        CHART_NAME=$(sed 's/^uni-//' <<< "$REPO")
+        [[ -d "charts/${CHART_NAME}" ]] || {
+          echo "ERROR: charts/${CHART_NAME} not found — repo name may not match chart directory"
+          exit 1
+        }
+        echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_ENV
+        echo "CHART_NAME=${CHART_NAME}" >> $GITHUB_ENV
+    - name: Patch Chart.yaml sentinel
+      run: |
+        # uni-chart-release-action uses `cr package` which reads version directly
+        # from Chart.yaml and has no --version override flag. The sentinel must be
+        # patched on disk before the action runs. Contrast with nightly.yaml, which
+        # bypasses Chart.yaml entirely via `helm package --version`.
+        sed -i "s/^version: 0\.0\.0$/version: ${CHART_VERSION}/" "charts/${CHART_NAME}/Chart.yaml"
+        sed -i "s/^appVersion: 0\.0\.0$/appVersion: ${CHART_VERSION}/" "charts/${CHART_NAME}/Chart.yaml"
+        PATCHED_VERSION=$(grep '^version:' "charts/${CHART_NAME}/Chart.yaml" | awk '{print $2}')
+        PATCHED_APP_VERSION=$(grep '^appVersion:' "charts/${CHART_NAME}/Chart.yaml" | awk '{print $2}')
+        [[ "${PATCHED_VERSION}" == "${CHART_VERSION}" ]] || {
+          echo "ERROR: Chart.yaml version patch failed — sentinel was not present"
+          exit 1
+        }
+        [[ "${PATCHED_APP_VERSION}" == "${CHART_VERSION}" ]] || {
+          echo "ERROR: Chart.yaml appVersion patch failed — sentinel was not present"
+          exit 1
+        }
     - name: Setup Go
       uses: actions/setup-go@v6
       with:
@@ -33,9 +80,7 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
     - name: Build and Push Images
-      run: make touch all images -e RELEASE=1 VERSION=${{ github.ref_name }}
-#    - name: Build Documentation
-#      run: sudo apt -y install wbritish && go run github.com/unikorn-cloud/core/hack/docs -o docs/server-api.md
+      run: make touch all images -e RELEASE=1 VERSION="${{ github.ref_name }}"
     - name: Configure Git
       run: |
         git config user.name "$GITHUB_ACTOR"
@@ -50,5 +95,3 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         name: Release ${{ github.ref_name }}
         tag_name: ${{ github.ref_name }}
-#        files: |
-#          docs/server-api.md
