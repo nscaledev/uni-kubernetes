@@ -1,0 +1,93 @@
+name: Nightly
+on:
+  schedule:
+  - cron: '0 2 * * *'
+  workflow_dispatch: {}
+# Queue concurrent runs rather than cancelling them. cancel-in-progress: true
+# would risk killing a run between image/chart publish and tag push, leaving
+# published artifacts with no corresponding tag.
+concurrency:
+  group: nightly
+  cancel-in-progress: false
+permissions:
+  contents: write
+  packages: write
+env:
+  REGISTRY: ghcr.io
+jobs:
+  Nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+    - name: Setup Go
+      uses: actions/setup-go@v6
+      with:
+        go-version-file: go.mod
+    - name: Install Helm
+      uses: azure/setup-helm@v4
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Configure Git
+      run: |
+        git config user.name "$GITHUB_ACTOR"
+        git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+    - name: Compute tag
+      run: |
+        TAG="v0.0.0-$(date -u +%Y%m%d%H%M%S)-$(git rev-parse --short=12 HEAD)"
+        CHART_VERSION="${TAG#v}"
+        REPO=$(cut -d'/' -f2 <<< "$GITHUB_REPOSITORY")
+        CHART_NAME=$(sed 's/^uni-//' <<< "$REPO")
+        [[ -d "charts/${CHART_NAME}" ]] || {
+          echo "ERROR: charts/${CHART_NAME} not found — repo name may not match chart directory"
+          exit 1
+        }
+        CHART_PACKAGE_NAME=$(grep '^name:' "charts/${CHART_NAME}/Chart.yaml" | awk '{print $2}')
+        [[ -n "${CHART_PACKAGE_NAME}" ]] || {
+          echo "ERROR: could not extract chart name from charts/${CHART_NAME}/Chart.yaml"
+          exit 1
+        }
+        echo "TAG=${TAG}" >> $GITHUB_ENV
+        echo "CHART_VERSION=${CHART_VERSION}" >> $GITHUB_ENV
+        echo "CHART_NAME=${CHART_NAME}" >> $GITHUB_ENV
+        echo "CHART_PACKAGE_NAME=${CHART_PACKAGE_NAME}" >> $GITHUB_ENV
+    - name: Docker Login
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Build and Push Image
+      # Nightly images are published under ghcr.io/nscaledev/nightly/ to keep
+      # them segregated from official release images at ghcr.io/nscaledev/.
+      run: make touch all images -e RELEASE=1 VERSION="${TAG}" DOCKER_ORG=ghcr.io/nscaledev/nightly
+    - name: Log in to GHCR (Helm)
+      run: |
+        echo "$GITHUB_TOKEN" | helm registry login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Update chart dependencies
+      run: helm dependency update "charts/${CHART_NAME}"
+    - name: Package and push chart
+      run: |
+        helm package "charts/${CHART_NAME}" --version "${CHART_VERSION}" --app-version "${CHART_VERSION}"
+        helm push "${CHART_PACKAGE_NAME}-${CHART_VERSION}.tgz" "oci://ghcr.io/nscaledev/charts-nightly"
+    # Tag is pushed after successful artifact publishes so a failed publish does
+    # not leave a dangling tag pointing at a commit with no artifacts.
+    - name: Push tag
+      run: |
+        git tag "${TAG}"
+        git push origin "${TAG}"
+    - name: Notify Slack on failure
+      if: failure()
+      uses: slackapi/slack-github-action@v2
+      with:
+        webhook: ${{ secrets.SLACK_WEBHOOK_URL_NIGHTLY }}
+        webhook-type: incoming-webhook
+        payload: |
+          {
+            "text": ":red_circle: *Nightly build failed* — `${{ github.repository }}`. I'll be back.\n${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
