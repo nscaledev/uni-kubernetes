@@ -68,6 +68,9 @@ type ServerInterface interface {
 
 	// (GET /api/v1/organizations/{organizationID}/virtualclusters)
 	GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDVirtualclustersParams)
+	// Get the deployed service version
+	// (GET /api/v2/version)
+	GetApiV2Version(w http.ResponseWriter, r *http.Request)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -161,6 +164,12 @@ func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDRegionsRegionIDImages(
 
 // (GET /api/v1/organizations/{organizationID}/virtualclusters)
 func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDVirtualclustersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get the deployed service version
+// (GET /api/v2/version)
+func (_ Unimplemented) GetApiV2Version(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -943,6 +952,26 @@ func (siw *ServerInterfaceWrapper) GetApiV1OrganizationsOrganizationIDVirtualclu
 	handler.ServeHTTP(w, r)
 }
 
+// GetApiV2Version operation middleware
+func (siw *ServerInterfaceWrapper) GetApiV2Version(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, Oauth2AuthenticationScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetApiV2Version(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -1109,6 +1138,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/api/v1/organizations/{organizationID}/virtualclusters", wrapper.GetApiV1OrganizationsOrganizationIDVirtualclusters)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/api/v2/version", wrapper.GetApiV2Version)
 	})
 
 	return r
