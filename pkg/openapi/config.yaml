@@ -1,4 +1,4 @@
 package: generated
 import-mapping:
-  https://raw.githubusercontent.com/unikorn-cloud/core/main/pkg/openapi/common.spec.yaml: github.com/unikorn-cloud/core/pkg/openapi
+  https://raw.githubusercontent.com/unikorn-cloud/core/v1.17.1/pkg/openapi/common.spec.yaml: github.com/unikorn-cloud/core/pkg/openapi
   https://raw.githubusercontent.com/unikorn-cloud/region/main/pkg/openapi/server.spec.yaml: github.com/unikorn-cloud/region/pkg/openapi
