@@ -157,8 +157,8 @@ type ClientInterface interface {
 	// GetApiV1OrganizationsOrganizationIDVirtualclusters request
 	GetApiV1OrganizationsOrganizationIDVirtualclusters(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDVirtualclustersParams, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GetApiV2Version request
-	GetApiV2Version(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+	// GetApiVersion request
+	GetApiVersion(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
 }
 
 func (c *Client) GetWellKnownOpenidProtectedResource(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -449,8 +449,8 @@ func (c *Client) GetApiV1OrganizationsOrganizationIDVirtualclusters(ctx context.
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetApiV2Version(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGetApiV2VersionRequest(c.Server)
+func (c *Client) GetApiVersion(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetApiVersionRequest(c.Server)
 	if err != nil {
 		return nil, err
 	}
@@ -1353,8 +1353,8 @@ func NewGetApiV1OrganizationsOrganizationIDVirtualclustersRequest(server string,
 	return req, nil
 }
 
-// NewGetApiV2VersionRequest generates requests for GetApiV2Version
-func NewGetApiV2VersionRequest(server string) (*http.Request, error) {
+// NewGetApiVersionRequest generates requests for GetApiVersion
+func NewGetApiVersionRequest(server string) (*http.Request, error) {
 	var err error
 
 	serverURL, err := url.Parse(server)
@@ -1362,7 +1362,7 @@ func NewGetApiV2VersionRequest(server string) (*http.Request, error) {
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/api/v2/version")
+	operationPath := fmt.Sprintf("/api/version")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -1489,8 +1489,8 @@ type ClientWithResponsesInterface interface {
 	// GetApiV1OrganizationsOrganizationIDVirtualclustersWithResponse request
 	GetApiV1OrganizationsOrganizationIDVirtualclustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDVirtualclustersParams, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDVirtualclustersResponse, error)
 
-	// GetApiV2VersionWithResponse request
-	GetApiV2VersionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV2VersionResponse, error)
+	// GetApiVersionWithResponse request
+	GetApiVersionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiVersionResponse, error)
 }
 
 type GetWellKnownOpenidProtectedResourceResponse struct {
@@ -1965,7 +1965,7 @@ func (r GetApiV1OrganizationsOrganizationIDVirtualclustersResponse) StatusCode()
 	return 0
 }
 
-type GetApiV2VersionResponse struct {
+type GetApiVersionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON200      *externalRef0.ServiceVersionResponse
@@ -1974,7 +1974,7 @@ type GetApiV2VersionResponse struct {
 }
 
 // Status returns HTTPResponse.Status
-func (r GetApiV2VersionResponse) Status() string {
+func (r GetApiVersionResponse) Status() string {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.Status
 	}
@@ -1982,7 +1982,7 @@ func (r GetApiV2VersionResponse) Status() string {
 }
 
 // StatusCode returns HTTPResponse.StatusCode
-func (r GetApiV2VersionResponse) StatusCode() int {
+func (r GetApiVersionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -2199,13 +2199,13 @@ func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDVirtualclusters
 	return ParseGetApiV1OrganizationsOrganizationIDVirtualclustersResponse(rsp)
 }
 
-// GetApiV2VersionWithResponse request returning *GetApiV2VersionResponse
-func (c *ClientWithResponses) GetApiV2VersionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiV2VersionResponse, error) {
-	rsp, err := c.GetApiV2Version(ctx, reqEditors...)
+// GetApiVersionWithResponse request returning *GetApiVersionResponse
+func (c *ClientWithResponses) GetApiVersionWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetApiVersionResponse, error) {
+	rsp, err := c.GetApiVersion(ctx, reqEditors...)
 	if err != nil {
 		return nil, err
 	}
-	return ParseGetApiV2VersionResponse(rsp)
+	return ParseGetApiVersionResponse(rsp)
 }
 
 // ParseGetWellKnownOpenidProtectedResourceResponse parses an HTTP response from a GetWellKnownOpenidProtectedResourceWithResponse call
@@ -3208,15 +3208,15 @@ func ParseGetApiV1OrganizationsOrganizationIDVirtualclustersResponse(rsp *http.R
 	return response, nil
 }
 
-// ParseGetApiV2VersionResponse parses an HTTP response from a GetApiV2VersionWithResponse call
-func ParseGetApiV2VersionResponse(rsp *http.Response) (*GetApiV2VersionResponse, error) {
+// ParseGetApiVersionResponse parses an HTTP response from a GetApiVersionWithResponse call
+func ParseGetApiVersionResponse(rsp *http.Response) (*GetApiVersionResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
 	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
 
-	response := &GetApiV2VersionResponse{
+	response := &GetApiVersionResponse{
 		Body:         bodyBytes,
 		HTTPResponse: rsp,
 	}

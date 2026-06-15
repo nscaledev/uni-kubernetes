@@ -14,23 +14,37 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//nolint:revive
-package handler
+package handler_test
 
 import (
+	"encoding/json"
 	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
-	"github.com/unikorn-cloud/core/pkg/server/util"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
+	"github.com/unikorn-cloud/kubernetes/pkg/server/handler"
 )
 
-func (h *Handler) GetApiV2Version(w http.ResponseWriter, r *http.Request) {
-	result := coreapi.ServiceVersionRead{
-		Name:    constants.Application,
-		Version: constants.Version,
-	}
+func Test_Version_Get(t *testing.T) {
+	t.Parallel()
 
-	h.setUncacheable(w)
-	util.WriteJSONResponse(w, r, http.StatusOK, result)
+	h := &handler.Handler{}
+
+	w := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodGet, "/api/version", nil)
+
+	h.GetApiVersion(w, r)
+
+	require.Equal(t, http.StatusOK, w.Code)
+	require.Equal(t, "no-cache", w.Header().Get("Cache-Control"))
+
+	var result coreapi.ServiceVersionRead
+
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &result))
+	require.Equal(t, constants.Application, result.Name)
+	require.Equal(t, constants.Version, result.Version)
 }
