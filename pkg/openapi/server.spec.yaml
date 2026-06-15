@@ -17,7 +17,7 @@ paths:
       responses:
         '200':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/v1.17.1/pkg/openapi/common.spec.yaml#/components/responses/openidProtectedResourceResponse'
-  /api/v2/version:
+  /api/version:
     description: Service build version information.
     get:
       summary: Get the deployed service version
