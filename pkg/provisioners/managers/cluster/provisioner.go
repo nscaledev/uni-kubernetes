@@ -60,6 +60,8 @@ import (
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
+	"k8s.io/utils/ptr"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -483,6 +485,73 @@ func (p *Provisioner) getFlavors(ctx context.Context, client regionapi.ClientWit
 	return flavors, nil
 }
 
+// clusterImageIDs returns the set of distinct image IDs referenced by the cluster's
+// control plane and workload pools.
+func (p *Provisioner) clusterImageIDs() []string {
+	ids := []string{p.cluster.Spec.ControlPlane.ImageID}
+
+	for i := range p.cluster.Spec.WorkloadPools.Pools {
+		ids = append(ids, p.cluster.Spec.WorkloadPools.Pools[i].ImageID)
+	}
+
+	slices.Sort(ids)
+
+	return slices.Compact(ids)
+}
+
+// imagesReady gates provisioning on the readiness of every image referenced by the
+// cluster.  Image selection happens at the API layer and may pick an image that is
+// still uploading, so we yield here until it is ready rather than handing a non-ready
+// image to Cluster API (which would surface a transient OpenStack error).
+//
+// An image that is failed or absent from the listing is a terminal error.  This runs
+// on every reconcile, so retiring or deleting an image that a cluster still references
+// will flip that cluster into an error state: this is intentional, as such a cluster
+// can no longer safely scale out or rebuild nodes and operators should be told.
+func (p *Provisioner) imagesReady(ctx context.Context, client regionapi.ClientWithResponsesInterface) error {
+	log := log.FromContext(ctx)
+
+	organizationID := p.cluster.Labels[coreconstants.OrganizationLabel]
+
+	params := &regionapi.GetApiV2RegionsRegionIDImagesParams{
+		OrganizationID: &regionapi.OrganizationIDQueryParameter{organizationID},
+		Scope:          ptr.To(regionapi.GetApiV2RegionsRegionIDImagesParamsScopeAvailable),
+	}
+
+	resp, err := client.GetApiV2RegionsRegionIDImagesWithResponse(ctx, p.cluster.Spec.RegionID, params)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode() != http.StatusOK {
+		return servererrors.PropagateError(resp.HTTPResponse, resp)
+	}
+
+	states := map[string]regionapi.ImageState{}
+
+	for _, image := range *resp.JSON200 {
+		states[image.Metadata.Id] = image.Status.State
+	}
+
+	for _, id := range p.clusterImageIDs() {
+		// A missing image has the zero-value state, which falls through to the
+		// terminal default along with failed.
+		//nolint:exhaustive
+		switch states[id] {
+		case regionapi.ImageStateReady:
+			continue
+		case regionapi.ImageStateCreating, regionapi.ImageStatePending:
+			log.Info("waiting for image to become ready", "imageID", id)
+
+			return provisioners.ErrYield
+		default:
+			return fmt.Errorf("%w: image %s is not available", ErrResourceDependency, id)
+		}
+	}
+
+	return nil
+}
+
 func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.IdentityRead, error) {
 	log := log.FromContext(ctx)
 
@@ -590,6 +659,10 @@ func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.Clie
 
 	externalNetwork, err := p.getExternalNetwork(ctx, client)
 	if err != nil {
+		return nil, err
+	}
+
+	if err := p.imagesReady(ctx, client); err != nil {
 		return nil, err
 	}
 
