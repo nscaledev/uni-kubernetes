@@ -26,6 +26,8 @@ import (
 	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
+
+	"k8s.io/utils/ptr"
 )
 
 var (
@@ -132,8 +134,24 @@ func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) (
 }
 
 // Images returns all Kubernetes compatible images.
+//
+// This uses the region v2 images API, which (unlike the deprecated v1 API) does not
+// filter by readiness server side.  We deliberately include images that are not yet
+// ready (e.g. still uploading) so that a freshly created image is selectable
+// immediately; the cluster provisioner gates on readiness and holds provisioning
+// until the selected image becomes ready.
 func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([]regionapi.Image, error) {
-	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(ctx, organizationID, regionID)
+	params := &regionapi.GetApiV2RegionsRegionIDImagesParams{
+		OrganizationID: &regionapi.OrganizationIDQueryParameter{organizationID},
+		Scope:          ptr.To(regionapi.GetApiV2RegionsRegionIDImagesParamsScopeAvailable),
+		Status: &regionapi.ImageStatusQueryParameter{
+			regionapi.ImageStateReady,
+			regionapi.ImageStatePending,
+			regionapi.ImageStateCreating,
+		},
+	}
+
+	resp, err := c.client.GetApiV2RegionsRegionIDImagesWithResponse(ctx, regionID, params)
 	if err != nil {
 		return nil, err
 	}
