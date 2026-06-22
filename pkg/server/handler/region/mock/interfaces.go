@@ -12,7 +12,9 @@ import (
 	context "context"
 	reflect "reflect"
 
+	ids "github.com/unikorn-cloud/identity/pkg/ids"
 	openapi "github.com/unikorn-cloud/kubernetes/pkg/openapi"
+	ids0 "github.com/unikorn-cloud/region/pkg/ids"
 	openapi0 "github.com/unikorn-cloud/region/pkg/openapi"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -41,7 +43,7 @@ func (m *MockClientInterface) EXPECT() *MockClientInterfaceMockRecorder {
 }
 
 // Flavors mocks base method.
-func (m *MockClientInterface) Flavors(ctx context.Context, organizationID, regionID string) ([]openapi0.Flavor, error) {
+func (m *MockClientInterface) Flavors(ctx context.Context, organizationID ids.OrganizationID, regionID ids0.RegionID) ([]openapi0.Flavor, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Flavors", ctx, organizationID, regionID)
 	ret0, _ := ret[0].([]openapi0.Flavor)
@@ -56,7 +58,7 @@ func (mr *MockClientInterfaceMockRecorder) Flavors(ctx, organizationID, regionID
 }
 
 // Get mocks base method.
-func (m *MockClientInterface) Get(ctx context.Context, organizationID, regionID string) (*openapi0.RegionDetailRead, error) {
+func (m *MockClientInterface) Get(ctx context.Context, organizationID ids.OrganizationID, regionID ids0.RegionID) (*openapi0.RegionDetailRead, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Get", ctx, organizationID, regionID)
 	ret0, _ := ret[0].(*openapi0.RegionDetailRead)
@@ -71,7 +73,7 @@ func (mr *MockClientInterfaceMockRecorder) Get(ctx, organizationID, regionID any
 }
 
 // Images mocks base method.
-func (m *MockClientInterface) Images(ctx context.Context, organizationID, regionID string) ([]openapi0.Image, error) {
+func (m *MockClientInterface) Images(ctx context.Context, organizationID ids.OrganizationID, regionID ids0.RegionID) ([]openapi0.Image, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Images", ctx, organizationID, regionID)
 	ret0, _ := ret[0].([]openapi0.Image)
@@ -86,7 +88,7 @@ func (mr *MockClientInterfaceMockRecorder) Images(ctx, organizationID, regionID 
 }
 
 // List mocks base method.
-func (m *MockClientInterface) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDRegionsParams) ([]openapi0.RegionRead, error) {
+func (m *MockClientInterface) List(ctx context.Context, organizationID ids.OrganizationID, params openapi.GetApiV1OrganizationsOrganizationIDRegionsParams) ([]openapi0.RegionRead, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "List", ctx, organizationID, params)
 	ret0, _ := ret[0].([]openapi0.RegionRead)

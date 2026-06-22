@@ -27,6 +27,7 @@ import (
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/server/util"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	"github.com/unikorn-cloud/identity/pkg/principal"
 	"github.com/unikorn-cloud/identity/pkg/rbac"
@@ -108,7 +109,7 @@ func (h *Handler) GetWellKnownOpenidProtectedResource(w http.ResponseWriter, r *
 func (h *Handler) GetApiV1OrganizationsOrganizationIDRegions(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, params openapi.GetApiV1OrganizationsOrganizationIDRegionsParams) {
 	ctx := r.Context()
 
-	if err := rbac.AllowOrganizationScope(ctx, "kubernetes:regions", identityapi.Read, organizationID); err != nil {
+	if err := rbac.AllowOrganizationScopeID(ctx, "kubernetes:regions", identityapi.Read, organizationID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -127,7 +128,7 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDRegions(w http.ResponseWrit
 func (h *Handler) GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavors(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, regionID openapi.RegionIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowOrganizationScope(ctx, "kubernetes:flavors", identityapi.Read, organizationID); err != nil {
+	if err := rbac.AllowOrganizationScopeID(ctx, "kubernetes:flavors", identityapi.Read, organizationID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -146,7 +147,7 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavors(w ht
 func (h *Handler) GetApiV1OrganizationsOrganizationIDRegionsRegionIDImages(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, regionID openapi.RegionIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowOrganizationScope(ctx, "kubernetes:images", identityapi.Read, organizationID); err != nil {
+	if err := rbac.AllowOrganizationScopeID(ctx, "kubernetes:images", identityapi.Read, organizationID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -172,7 +173,15 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClustermanagers(w http.Resp
 	}
 
 	result = slices.DeleteFunc(result, func(resource openapi.ClusterManagerRead) bool {
-		return rbac.AllowProjectScope(ctx, "kubernetes:clustermanagers", identityapi.Read, organizationID, resource.Metadata.ProjectId) != nil
+		// The project ID comes from the read model (a stored label) so is a
+		// plain string; parse it to the typed ID for the scope check and fail
+		// closed (drop the resource) if it is somehow malformed.
+		projectID, err := identityids.ParseProjectID(resource.Metadata.ProjectId)
+		if err != nil {
+			return true
+		}
+
+		return rbac.AllowProjectScopeID(ctx, "kubernetes:clustermanagers", identityapi.Read, organizationID, projectID) != nil
 	})
 
 	h.setUncacheable(w)
@@ -182,7 +191,7 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClustermanagers(w http.Resp
 func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustermanagers(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:clustermanagers", identityapi.Create, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:clustermanagers", identityapi.Create, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -207,7 +216,7 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusterma
 func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustermanagersClusterManagerID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterManagerID openapi.ClusterManagerIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:clustermanagers", identityapi.Delete, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:clustermanagers", identityapi.Delete, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -224,7 +233,7 @@ func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDCluster
 func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustermanagersClusterManagerID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterManagerID openapi.ClusterManagerIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:clustermanagers", identityapi.Update, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:clustermanagers", identityapi.Update, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -259,7 +268,15 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWri
 	}
 
 	result = slices.DeleteFunc(result, func(resource openapi.KubernetesClusterRead) bool {
-		return rbac.AllowProjectScope(ctx, "kubernetes:clusters", identityapi.Read, organizationID, resource.Metadata.ProjectId) != nil
+		// The project ID comes from the read model (a stored label) so is a
+		// plain string; parse it to the typed ID for the scope check and fail
+		// closed (drop the resource) if it is somehow malformed.
+		projectID, err := identityids.ParseProjectID(resource.Metadata.ProjectId)
+		if err != nil {
+			return true
+		}
+
+		return rbac.AllowProjectScopeID(ctx, "kubernetes:clusters", identityapi.Read, organizationID, projectID) != nil
 	})
 
 	h.setUncacheable(w)
@@ -269,7 +286,7 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDClusters(w http.ResponseWri
 func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:clusters", identityapi.Create, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:clusters", identityapi.Create, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -291,10 +308,10 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(
 	util.WriteJSONResponse(w, r, http.StatusAccepted, result)
 }
 
-func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
+func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.KubernetesClusterIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:clusters", identityapi.Delete, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:clusters", identityapi.Delete, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -308,10 +325,10 @@ func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDCluster
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
+func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.KubernetesClusterIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:clusters", identityapi.Update, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:clusters", identityapi.Update, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -332,10 +349,10 @@ func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersCl
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *Handler) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
+func (h *Handler) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.KubernetesClusterIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:clusters", identityapi.Read, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:clusters", identityapi.Read, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -364,7 +381,15 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.Resp
 	}
 
 	result = slices.DeleteFunc(result, func(resource openapi.VirtualKubernetesClusterRead) bool {
-		return rbac.AllowProjectScope(ctx, "kubernetes:virtualclusters", identityapi.Read, organizationID, resource.Metadata.ProjectId) != nil
+		// The project ID comes from the read model (a stored label) so is a
+		// plain string; parse it to the typed ID for the scope check and fail
+		// closed (drop the resource) if it is somehow malformed.
+		projectID, err := identityids.ParseProjectID(resource.Metadata.ProjectId)
+		if err != nil {
+			return true
+		}
+
+		return rbac.AllowProjectScopeID(ctx, "kubernetes:virtualclusters", identityapi.Read, organizationID, projectID) != nil
 	})
 
 	h.setUncacheable(w)
@@ -374,7 +399,7 @@ func (h *Handler) GetApiV1OrganizationsOrganizationIDVirtualclusters(w http.Resp
 func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:virtualclusters", identityapi.Create, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:virtualclusters", identityapi.Create, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -396,10 +421,10 @@ func (h *Handler) PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualcl
 	util.WriteJSONResponse(w, r, http.StatusAccepted, result)
 }
 
-func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
+func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.VirtualKubernetesClusterIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:virtualclusters", identityapi.Delete, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:virtualclusters", identityapi.Delete, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -413,10 +438,10 @@ func (h *Handler) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtual
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
+func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.VirtualKubernetesClusterIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:virtualclusters", identityapi.Update, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:virtualclusters", identityapi.Update, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}
@@ -437,10 +462,10 @@ func (h *Handler) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclu
 	w.WriteHeader(http.StatusAccepted)
 }
 
-func (h *Handler) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.ClusterIDParameter) {
+func (h *Handler) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID openapi.OrganizationIDParameter, projectID openapi.ProjectIDParameter, clusterID openapi.VirtualKubernetesClusterIDParameter) {
 	ctx := r.Context()
 
-	if err := rbac.AllowProjectScope(ctx, "kubernetes:virtualclusters", identityapi.Read, organizationID, projectID); err != nil {
+	if err := rbac.AllowProjectScopeID(ctx, "kubernetes:virtualclusters", identityapi.Read, organizationID, projectID); err != nil {
 		errors.HandleError(w, r, err)
 		return
 	}

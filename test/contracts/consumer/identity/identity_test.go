@@ -32,6 +32,7 @@ import (
 
 	coreclient "github.com/unikorn-cloud/core/pkg/openapi"
 	contract "github.com/unikorn-cloud/core/pkg/testing/contract"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 )
 
@@ -171,7 +172,7 @@ func createAllocationTestFunc(ctx context.Context, params allocationTestParams) 
 		}
 
 		resp, err := identityClient.PostApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsWithResponse(
-			ctx, params.organizationID, params.projectID, allocationReq)
+			ctx, identityids.MustParseOrganizationID(params.organizationID), identityids.MustParseProjectID(params.projectID), allocationReq)
 		if err != nil {
 			return fmt.Errorf("creating allocation: %w", err)
 		}
@@ -353,7 +354,7 @@ var _ = Describe("Identity Service Contract", func() {
 					}
 
 					resp, err := identityClient.PutApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(
-						ctx, organizationID, projectID, allocationID, allocationReq)
+						ctx, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), identityids.MustParseAllocationID(allocationID), allocationReq)
 					if err != nil {
 						return fmt.Errorf("updating allocation: %w", err)
 					}
@@ -398,7 +399,7 @@ var _ = Describe("Identity Service Contract", func() {
 					}
 
 					resp, err := identityClient.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDAllocationsAllocationIDWithResponse(
-						ctx, organizationID, projectID, allocationID)
+						ctx, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), identityids.MustParseAllocationID(allocationID))
 					if err != nil {
 						return fmt.Errorf("deleting allocation: %w", err)
 					}

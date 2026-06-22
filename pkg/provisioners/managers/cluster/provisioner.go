@@ -41,6 +41,7 @@ import (
 	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
 	"github.com/unikorn-cloud/core/pkg/util"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
@@ -58,6 +59,7 @@ import (
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/openstackplugincindercsi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/vcluster"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	"k8s.io/utils/ptr"
@@ -470,7 +472,29 @@ func (p *Provisioner) getRegionClient(ctx context.Context) (context.Context, reg
 	return ctx, client, nil
 }
 
-func (p *Provisioner) getFlavors(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID, regionID string) ([]regionapi.Flavor, error) {
+// organizationID parses the owning organization ID from the cluster's labels.
+// These values are written by the (validated) API layer, so a malformed value
+// means a tampered resource and we fail closed.
+func (p *Provisioner) organizationID() (identityids.OrganizationID, error) {
+	return identityids.ParseOrganizationID(p.cluster.Labels[coreconstants.OrganizationLabel])
+}
+
+// projectID parses the owning project ID from the cluster's labels.
+func (p *Provisioner) projectID() (identityids.ProjectID, error) {
+	return identityids.ParseProjectID(p.cluster.Labels[coreconstants.ProjectLabel])
+}
+
+// regionID parses the region ID from the cluster's spec.
+func (p *Provisioner) regionID() (regionids.RegionID, error) {
+	return regionids.ParseRegionID(p.cluster.Spec.RegionID)
+}
+
+// identityID parses the provisioned cloud identity ID from the cluster's annotations.
+func (p *Provisioner) identityID() (regionids.IdentityID, error) {
+	return regionids.ParseIdentityID(p.cluster.Annotations[coreconstants.IdentityAnnotation])
+}
+
+func (p *Provisioner) getFlavors(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID identityids.OrganizationID, regionID regionids.RegionID) ([]regionapi.Flavor, error) {
 	resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
@@ -511,14 +535,22 @@ func (p *Provisioner) clusterImageIDs() []string {
 func (p *Provisioner) imagesReady(ctx context.Context, client regionapi.ClientWithResponsesInterface) error {
 	log := log.FromContext(ctx)
 
-	organizationID := p.cluster.Labels[coreconstants.OrganizationLabel]
+	organizationID, err := p.organizationID()
+	if err != nil {
+		return err
+	}
+
+	regionID, err := p.regionID()
+	if err != nil {
+		return err
+	}
 
 	params := &regionapi.GetApiV2RegionsRegionIDImagesParams{
-		OrganizationID: &regionapi.OrganizationIDQueryParameter{organizationID},
+		OrganizationID: &regionapi.OrganizationIDQueryParameter{organizationID.String()},
 		Scope:          ptr.To(regionapi.GetApiV2RegionsRegionIDImagesParamsScopeAvailable),
 	}
 
-	resp, err := client.GetApiV2RegionsRegionIDImagesWithResponse(ctx, p.cluster.Spec.RegionID, params)
+	resp, err := client.GetApiV2RegionsRegionIDImagesWithResponse(ctx, regionID, params)
 	if err != nil {
 		return err
 	}
@@ -555,7 +587,22 @@ func (p *Provisioner) imagesReady(ctx context.Context, client regionapi.ClientWi
 func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.IdentityRead, error) {
 	log := log.FromContext(ctx)
 
-	response, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation])
+	organizationID, err := p.organizationID()
+	if err != nil {
+		return nil, err
+	}
+
+	projectID, err := p.projectID()
+	if err != nil {
+		return nil, err
+	}
+
+	identityID, err := p.identityID()
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(ctx, organizationID, projectID, identityID)
 	if err != nil {
 		return nil, err
 	}
@@ -580,7 +627,22 @@ func (p *Provisioner) getIdentity(ctx context.Context, client regionapi.ClientWi
 }
 
 func (p *Provisioner) deleteIdentity(ctx context.Context, client regionapi.ClientWithResponsesInterface) error {
-	response, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation])
+	organizationID, err := p.organizationID()
+	if err != nil {
+		return err
+	}
+
+	projectID, err := p.projectID()
+	if err != nil {
+		return err
+	}
+
+	identityID, err := p.identityID()
+	if err != nil {
+		return err
+	}
+
+	response, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(ctx, organizationID, projectID, identityID)
 	if err != nil {
 		return err
 	}
@@ -600,13 +662,33 @@ func (p *Provisioner) deleteIdentity(ctx context.Context, client regionapi.Clien
 func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.NetworkRead, error) {
 	log := log.FromContext(ctx)
 
-	networkID, ok := p.cluster.Annotations[coreconstants.PhysicalNetworkAnnotation]
+	rawNetworkID, ok := p.cluster.Annotations[coreconstants.PhysicalNetworkAnnotation]
 	if !ok {
 		//nolint: nilnil
 		return nil, nil
 	}
 
-	response, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksNetworkIDWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Labels[coreconstants.ProjectLabel], p.cluster.Annotations[coreconstants.IdentityAnnotation], networkID)
+	organizationID, err := p.organizationID()
+	if err != nil {
+		return nil, err
+	}
+
+	projectID, err := p.projectID()
+	if err != nil {
+		return nil, err
+	}
+
+	identityID, err := p.identityID()
+	if err != nil {
+		return nil, err
+	}
+
+	networkID, err := regionids.ParseNetworkID(rawNetworkID)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksNetworkIDWithResponse(ctx, organizationID, projectID, identityID, networkID)
 	if err != nil {
 		return nil, err
 	}
@@ -631,7 +713,17 @@ func (p *Provisioner) getNetwork(ctx context.Context, client regionapi.ClientWit
 }
 
 func (p *Provisioner) getExternalNetwork(ctx context.Context, client regionapi.ClientWithResponsesInterface) (*regionapi.ExternalNetwork, error) {
-	response, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDExternalnetworksWithResponse(ctx, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Spec.RegionID)
+	organizationID, err := p.organizationID()
+	if err != nil {
+		return nil, err
+	}
+
+	regionID, err := p.regionID()
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDExternalnetworksWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -666,7 +758,17 @@ func (p *Provisioner) identityOptions(ctx context.Context, client regionapi.Clie
 		return nil, err
 	}
 
-	flavors, err := p.getFlavors(ctx, client, p.cluster.Labels[coreconstants.OrganizationLabel], p.cluster.Spec.RegionID)
+	organizationID, err := p.organizationID()
+	if err != nil {
+		return nil, err
+	}
+
+	regionID, err := p.regionID()
+	if err != nil {
+		return nil, err
+	}
+
+	flavors, err := p.getFlavors(ctx, client, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}

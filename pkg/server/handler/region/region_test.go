@@ -26,12 +26,19 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	kubernetesapi "github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
 var errUnexpectedRequestCount = errors.New("unexpected request count")
+
+const (
+	testOrganizationID = "d4600d6e-e965-4b44-a808-84fb2fa36702"
+	testRegionID       = "a73e9c26-af56-4562-8352-9512e0586f3b"
+)
 
 func TestListDoesNotCacheImpersonatedResponses(t *testing.T) {
 	t.Parallel()
@@ -69,12 +76,12 @@ func TestListDoesNotCacheImpersonatedResponses(t *testing.T) {
 		RegionType: kubernetesapi.Virtual,
 	}
 
-	first, err := regions.List(t.Context(), "org-1", params)
+	first, err := regions.List(t.Context(), identityids.MustParseOrganizationID(testOrganizationID), params)
 	require.NoError(t, err)
 	require.Len(t, first, 1)
 	require.Equal(t, "region-1", first[0].Metadata.Id)
 
-	second, err := regions.List(t.Context(), "org-1", params)
+	second, err := regions.List(t.Context(), identityids.MustParseOrganizationID(testOrganizationID), params)
 	require.NoError(t, err)
 	require.Len(t, second, 1)
 	require.Equal(t, "region-2", second[0].Metadata.Id)
@@ -114,12 +121,12 @@ func TestFlavorsDoesNotCacheImpersonatedResponses(t *testing.T) {
 
 	regions := region.New(client)
 
-	first, err := regions.Flavors(t.Context(), "org-1", "region-1")
+	first, err := regions.Flavors(t.Context(), identityids.MustParseOrganizationID(testOrganizationID), regionids.MustParseRegionID(testRegionID))
 	require.NoError(t, err)
 	require.Len(t, first, 1)
 	require.Equal(t, "flavor-1", first[0].Metadata.Id)
 
-	second, err := regions.Flavors(t.Context(), "org-1", "region-1")
+	second, err := regions.Flavors(t.Context(), identityids.MustParseOrganizationID(testOrganizationID), regionids.MustParseRegionID(testRegionID))
 	require.NoError(t, err)
 	require.Len(t, second, 1)
 	require.Equal(t, "flavor-2", second[0].Metadata.Id)
@@ -163,12 +170,12 @@ func TestImagesDoesNotCacheImpersonatedResponses(t *testing.T) {
 
 	regions := region.New(client)
 
-	first, err := regions.Images(t.Context(), "org-1", "region-1")
+	first, err := regions.Images(t.Context(), identityids.MustParseOrganizationID(testOrganizationID), regionids.MustParseRegionID(testRegionID))
 	require.NoError(t, err)
 	require.Len(t, first, 1)
 	require.Equal(t, "image-1", first[0].Metadata.Id)
 
-	second, err := regions.Images(t.Context(), "org-1", "region-1")
+	second, err := regions.Images(t.Context(), identityids.MustParseOrganizationID(testOrganizationID), regionids.MustParseRegionID(testRegionID))
 	require.NoError(t, err)
 	require.Len(t, second, 1)
 	require.Equal(t, "image-2", second[0].Metadata.Id)

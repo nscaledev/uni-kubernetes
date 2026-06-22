@@ -15,7 +15,7 @@ import (
 
 	"github.com/oapi-codegen/runtime"
 	externalRef0 "github.com/unikorn-cloud/core/pkg/openapi"
-	externalRef1 "github.com/unikorn-cloud/region/pkg/openapi"
+	externalRef2 "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
@@ -119,15 +119,15 @@ type ClientInterface interface {
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, body PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID request
-	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBody request with any body
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig request
-	GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersWithBody request with any body
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -135,15 +135,15 @@ type ClientInterface interface {
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclusters(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, body PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID request
-	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
+	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBody request with any body
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig request
-	GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
+	GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	// GetApiV1OrganizationsOrganizationIDRegions request
 	GetApiV1OrganizationsOrganizationIDRegions(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDRegionsParams, reqEditors ...RequestEditorFn) (*http.Response, error)
@@ -281,7 +281,7 @@ func (c *Client) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(c
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest(c.Server, organizationID, projectID, clusterID)
 	if err != nil {
 		return nil, err
@@ -293,7 +293,7 @@ func (c *Client) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClusters
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequestWithBody(c.Server, organizationID, projectID, clusterID, contentType, body)
 	if err != nil {
 		return nil, err
@@ -305,7 +305,7 @@ func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClu
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest(c.Server, organizationID, projectID, clusterID, body)
 	if err != nil {
 		return nil, err
@@ -317,7 +317,7 @@ func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClu
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigRequest(c.Server, organizationID, projectID, clusterID)
 	if err != nil {
 		return nil, err
@@ -353,7 +353,7 @@ func (c *Client) PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclu
 	return c.Client.Do(req)
 }
 
-func (c *Client) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest(c.Server, organizationID, projectID, clusterID)
 	if err != nil {
 		return nil, err
@@ -365,7 +365,7 @@ func (c *Client) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualc
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBody(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequestWithBody(c.Server, organizationID, projectID, clusterID, contentType, body)
 	if err != nil {
 		return nil, err
@@ -377,7 +377,7 @@ func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclus
 	return c.Client.Do(req)
 }
 
-func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest(c.Server, organizationID, projectID, clusterID, body)
 	if err != nil {
 		return nil, err
@@ -389,7 +389,7 @@ func (c *Client) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclus
 	return c.Client.Do(req)
 }
 
-func (c *Client) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
+func (c *Client) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigRequest(c.Server, organizationID, projectID, clusterID)
 	if err != nil {
 		return nil, err
@@ -796,7 +796,7 @@ func NewPostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersRequestWith
 }
 
 // NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest generates requests for DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID
-func NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) (*http.Request, error) {
+func NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -844,7 +844,7 @@ func NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID
 }
 
 // NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest calls the generic PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID builder with application/json body
-func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody) (*http.Request, error) {
+func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -855,7 +855,7 @@ func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDReq
 }
 
 // NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequestWithBody generates requests for PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID with any type of body
-func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequestWithBody(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDRequestWithBody(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -905,7 +905,7 @@ func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDReq
 }
 
 // NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigRequest generates requests for GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig
-func NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) (*http.Request, error) {
+func NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1007,7 +1007,7 @@ func NewPostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersRequ
 }
 
 // NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest generates requests for DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID
-func NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) (*http.Request, error) {
+func NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1055,7 +1055,7 @@ func NewDeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersCl
 }
 
 // NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest calls the generic PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID builder with application/json body
-func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody) (*http.Request, error) {
+func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody) (*http.Request, error) {
 	var bodyReader io.Reader
 	buf, err := json.Marshal(body)
 	if err != nil {
@@ -1066,7 +1066,7 @@ func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClust
 }
 
 // NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequestWithBody generates requests for PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID with any type of body
-func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequestWithBody(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader) (*http.Request, error) {
+func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDRequestWithBody(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, contentType string, body io.Reader) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1116,7 +1116,7 @@ func NewPutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClust
 }
 
 // NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigRequest generates requests for GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig
-func NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) (*http.Request, error) {
+func NewGetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigRequest(server string, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter) (*http.Request, error) {
 	var err error
 
 	var pathParam0 string
@@ -1451,15 +1451,15 @@ type ClientWithResponsesInterface interface {
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, body PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV1OrganizationsOrganizationIDProjectsProjectIDClustersResponse, error)
 
 	// DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse request
-	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error)
+	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error)
 
 	// PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBodyWithResponse request with any body
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error)
 
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error)
 
 	// GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigWithResponse request
-	GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigResponse, error)
+	GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigResponse, error)
 
 	// PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersWithBodyWithResponse request with any body
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersResponse, error)
@@ -1467,15 +1467,15 @@ type ClientWithResponsesInterface interface {
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, body PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersJSONRequestBody, reqEditors ...RequestEditorFn) (*PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersResponse, error)
 
 	// DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse request
-	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error)
+	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error)
 
 	// PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBodyWithResponse request with any body
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error)
 
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error)
 
 	// GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigWithResponse request
-	GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigResponse, error)
+	GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigResponse, error)
 
 	// GetApiV1OrganizationsOrganizationIDRegionsWithResponse request
 	GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx context.Context, organizationID OrganizationIDParameter, params *GetApiV1OrganizationsOrganizationIDRegionsParams, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDRegionsResponse, error)
@@ -1861,7 +1861,7 @@ func (r GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClust
 type GetApiV1OrganizationsOrganizationIDRegionsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef1.RegionsResponse
+	JSON200      *externalRef2.RegionsResponse
 	JSON400      *externalRef0.BadRequestResponse
 	JSON401      *externalRef0.UnauthorizedResponse
 	JSON403      *externalRef0.ForbiddenResponse
@@ -1887,7 +1887,7 @@ func (r GetApiV1OrganizationsOrganizationIDRegionsResponse) StatusCode() int {
 type GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef1.FlavorsResponse
+	JSON200      *externalRef2.FlavorsResponse
 	JSON400      *externalRef0.BadRequestResponse
 	JSON401      *externalRef0.UnauthorizedResponse
 	JSON403      *externalRef0.ForbiddenResponse
@@ -1914,7 +1914,7 @@ func (r GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsResponse) Statu
 type GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *externalRef1.ImagesResponse
+	JSON200      *externalRef2.ImagesResponse
 	JSON400      *externalRef0.BadRequestResponse
 	JSON401      *externalRef0.UnauthorizedResponse
 	JSON403      *externalRef0.ForbiddenResponse
@@ -2077,7 +2077,7 @@ func (c *ClientWithResponses) PostApiV1OrganizationsOrganizationIDProjectsProjec
 }
 
 // DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse request returning *DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse
-func (c *ClientWithResponses) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error) {
+func (c *ClientWithResponses) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error) {
 	rsp, err := c.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx, organizationID, projectID, clusterID, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2086,7 +2086,7 @@ func (c *ClientWithResponses) DeleteApiV1OrganizationsOrganizationIDProjectsProj
 }
 
 // PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBodyWithResponse request with arbitrary body returning *PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse
-func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error) {
+func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error) {
 	rsp, err := c.PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithBody(ctx, organizationID, projectID, clusterID, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2094,7 +2094,7 @@ func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProject
 	return ParsePutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error) {
+func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDResponse, error) {
 	rsp, err := c.PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(ctx, organizationID, projectID, clusterID, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2103,7 +2103,7 @@ func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProject
 }
 
 // GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigWithResponse request returning *GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigResponse
-func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigResponse, error) {
+func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfigResponse, error) {
 	rsp, err := c.GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(ctx, organizationID, projectID, clusterID, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2129,7 +2129,7 @@ func (c *ClientWithResponses) PostApiV1OrganizationsOrganizationIDProjectsProjec
 }
 
 // DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse request returning *DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse
-func (c *ClientWithResponses) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error) {
+func (c *ClientWithResponses) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error) {
 	rsp, err := c.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx, organizationID, projectID, clusterID, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2138,7 +2138,7 @@ func (c *ClientWithResponses) DeleteApiV1OrganizationsOrganizationIDProjectsProj
 }
 
 // PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBodyWithResponse request with arbitrary body returning *PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse
-func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error) {
+func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBodyWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error) {
 	rsp, err := c.PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithBody(ctx, organizationID, projectID, clusterID, contentType, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2146,7 +2146,7 @@ func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProject
 	return ParsePutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse(rsp)
 }
 
-func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error) {
+func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, body PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDJSONRequestBody, reqEditors ...RequestEditorFn) (*PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDResponse, error) {
 	rsp, err := c.PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(ctx, organizationID, projectID, clusterID, body, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2155,7 +2155,7 @@ func (c *ClientWithResponses) PutApiV1OrganizationsOrganizationIDProjectsProject
 }
 
 // GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigWithResponse request returning *GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigResponse
-func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigResponse, error) {
+func (c *ClientWithResponses) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigWithResponse(ctx context.Context, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter, reqEditors ...RequestEditorFn) (*GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfigResponse, error) {
 	rsp, err := c.GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(ctx, organizationID, projectID, clusterID, reqEditors...)
 	if err != nil {
 		return nil, err
@@ -2986,7 +2986,7 @@ func ParseGetApiV1OrganizationsOrganizationIDRegionsResponse(rsp *http.Response)
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef1.RegionsResponse
+		var dest externalRef2.RegionsResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3040,7 +3040,7 @@ func ParseGetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsResponse(rsp 
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef1.FlavorsResponse
+		var dest externalRef2.FlavorsResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
@@ -3101,7 +3101,7 @@ func ParseGetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesResponse(rsp *
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest externalRef1.ImagesResponse
+		var dest externalRef2.ImagesResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

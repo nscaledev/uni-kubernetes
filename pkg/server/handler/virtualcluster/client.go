@@ -29,13 +29,16 @@ import (
 	coreutil "github.com/unikorn-cloud/core/pkg/server/util"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
+	kubernetesids "github.com/unikorn-cloud/kubernetes/pkg/ids"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
 	provisioner "github.com/unikorn-cloud/kubernetes/pkg/provisioners/managers/virtualcluster"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
 	regionutil "github.com/unikorn-cloud/kubernetes/pkg/util/region"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	corev1 "k8s.io/api/core/v1"
@@ -77,10 +80,10 @@ func NewClient(client client.Client, identity identityapi.ClientWithResponsesInt
 }
 
 // List returns all clusters owned by the implicit control plane.
-func (c *Client) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDVirtualclustersParams) (openapi.VirtualKubernetesClusters, error) {
+func (c *Client) List(ctx context.Context, organizationID identityids.OrganizationID, params openapi.GetApiV1OrganizationsOrganizationIDVirtualclustersParams) (openapi.VirtualKubernetesClusters, error) {
 	result := &unikornv1.VirtualKubernetesClusterList{}
 
-	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
+	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID.String()})
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to build label selector", err)
 	}
@@ -107,14 +110,14 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 
 	slices.SortStableFunc(result.Items, unikornv1.CompareVirtualKubernetesCluster)
 
-	return convertList(result), nil
+	return convertList(result)
 }
 
 // get returns the cluster.
-func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikornv1.VirtualKubernetesCluster, error) {
+func (c *Client) get(ctx context.Context, namespace string, clusterID kubernetesids.VirtualKubernetesClusterID) (*unikornv1.VirtualKubernetesCluster, error) {
 	result := &unikornv1.VirtualKubernetesCluster{}
 
-	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterID}, result); err != nil {
+	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterID.String()}, result); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, errors.HTTPNotFound().WithError(err)
 		}
@@ -127,8 +130,15 @@ func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikorn
 
 // regionKubernetesClient wraps up access to the remote Kubernetes cluster for
 // the region.
-func (c *Client) regionKubernetesClient(ctx context.Context, organizationID string, cluster *unikornv1.VirtualKubernetesCluster) (client.Client, error) {
-	region, err := c.region.Get(ctx, organizationID, cluster.Spec.RegionID)
+func (c *Client) regionKubernetesClient(ctx context.Context, organizationID identityids.OrganizationID, cluster *unikornv1.VirtualKubernetesCluster) (client.Client, error) {
+	// The region ID is read back from the CRD spec (a string sink) so parse it to
+	// the typed ID for the region API call, failing closed on a malformed value.
+	regionID, err := regionids.ParseRegionID(cluster.Spec.RegionID)
+	if err != nil {
+		return nil, err
+	}
+
+	region, err := c.region.Get(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -161,7 +171,7 @@ func (c *Client) regionKubernetesClient(ctx context.Context, organizationID stri
 }
 
 // GetKubeconfig returns the kubernetes configuation associated with a cluster.
-func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, clusterID string) ([]byte, error) {
+func (c *Client) GetKubeconfig(ctx context.Context, organizationID identityids.OrganizationID, projectID identityids.ProjectID, clusterID kubernetesids.VirtualKubernetesClusterID) ([]byte, error) {
 	project, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -195,8 +205,15 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 	return secret.Data["config"], nil
 }
 
-func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.VirtualKubernetesCluster) (identityapi.ResourceAllocationList, error) {
-	flavors, err := c.region.Flavors(ctx, organizationID, resource.Spec.RegionID)
+func (c *Client) generateAllocations(ctx context.Context, organizationID identityids.OrganizationID, resource *unikornv1.VirtualKubernetesCluster) (identityapi.ResourceAllocationList, error) {
+	// The region ID is read back from the CRD spec (a string sink) so parse it to
+	// the typed ID for the region API call, failing closed on a malformed value.
+	regionID, err := regionids.ParseRegionID(resource.Spec.RegionID)
+	if err != nil {
+		return nil, err
+	}
+
+	flavors, err := c.region.Flavors(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -269,7 +286,7 @@ type appBundleLister interface {
 }
 
 // Create creates the implicit cluster identified by the JTW claims.
-func (c *Client) Create(ctx context.Context, appclient appBundleLister, organizationID, projectID string, request *openapi.VirtualKubernetesClusterWrite) (*openapi.VirtualKubernetesClusterRead, error) {
+func (c *Client) Create(ctx context.Context, appclient appBundleLister, organizationID identityids.OrganizationID, projectID identityids.ProjectID, request *openapi.VirtualKubernetesClusterWrite) (*openapi.VirtualKubernetesClusterRead, error) {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -293,11 +310,11 @@ func (c *Client) Create(ctx context.Context, appclient appBundleLister, organiza
 		return nil, fmt.Errorf("%w: failed to create cluster", err)
 	}
 
-	return convert(cluster), nil
+	return convert(cluster)
 }
 
 // Delete deletes the implicit cluster identified by the JTW claims.
-func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterID string) error {
+func (c *Client) Delete(ctx context.Context, organizationID identityids.OrganizationID, projectID identityids.ProjectID, clusterID kubernetesids.VirtualKubernetesClusterID) error {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err
@@ -324,7 +341,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 }
 
 // Update implements read/modify/write for the cluster.
-func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterID string, request *openapi.VirtualKubernetesClusterWrite) error {
+func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID identityids.OrganizationID, projectID identityids.ProjectID, clusterID kubernetesids.VirtualKubernetesClusterID, request *openapi.VirtualKubernetesClusterWrite) error {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err

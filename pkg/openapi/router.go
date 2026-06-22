@@ -37,25 +37,25 @@ type ServerInterface interface {
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDClusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter)
 
 	// (DELETE /api/v1/organizations/{organizationID}/projects/{projectID}/clusters/{clusterID})
-	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter)
+	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter)
 
 	// (PUT /api/v1/organizations/{organizationID}/projects/{projectID}/clusters/{clusterID})
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter)
 
 	// (GET /api/v1/organizations/{organizationID}/projects/{projectID}/clusters/{clusterID}/kubeconfig)
-	GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter)
+	GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter)
 
 	// (POST /api/v1/organizations/{organizationID}/projects/{projectID}/virtualclusters)
 	PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclusters(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter)
 
 	// (DELETE /api/v1/organizations/{organizationID}/projects/{projectID}/virtualclusters/{clusterID})
-	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter)
+	DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter)
 
 	// (PUT /api/v1/organizations/{organizationID}/projects/{projectID}/virtualclusters/{clusterID})
-	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter)
+	PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter)
 
 	// (GET /api/v1/organizations/{organizationID}/projects/{projectID}/virtualclusters/{clusterID}/kubeconfig)
-	GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter)
+	GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter)
 
 	// (GET /api/v1/organizations/{organizationID}/regions)
 	GetApiV1OrganizationsOrganizationIDRegions(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, params GetApiV1OrganizationsOrganizationIDRegionsParams)
@@ -113,17 +113,17 @@ func (_ Unimplemented) PostApiV1OrganizationsOrganizationIDProjectsProjectIDClus
 }
 
 // (DELETE /api/v1/organizations/{organizationID}/projects/{projectID}/clusters/{clusterID})
-func (_ Unimplemented) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) {
+func (_ Unimplemented) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (PUT /api/v1/organizations/{organizationID}/projects/{projectID}/clusters/{clusterID})
-func (_ Unimplemented) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) {
+func (_ Unimplemented) PutApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (GET /api/v1/organizations/{organizationID}/projects/{projectID}/clusters/{clusterID}/kubeconfig)
-func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) {
+func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDProjectsProjectIDClustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID KubernetesClusterIDParameter) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -133,17 +133,17 @@ func (_ Unimplemented) PostApiV1OrganizationsOrganizationIDProjectsProjectIDVirt
 }
 
 // (DELETE /api/v1/organizations/{organizationID}/projects/{projectID}/virtualclusters/{clusterID})
-func (_ Unimplemented) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) {
+func (_ Unimplemented) DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (PUT /api/v1/organizations/{organizationID}/projects/{projectID}/virtualclusters/{clusterID})
-func (_ Unimplemented) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) {
+func (_ Unimplemented) PutApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterID(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // (GET /api/v1/organizations/{organizationID}/projects/{projectID}/virtualclusters/{clusterID}/kubeconfig)
-func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID ClusterIDParameter) {
+func (_ Unimplemented) GetApiV1OrganizationsOrganizationIDProjectsProjectIDVirtualclustersClusterIDKubeconfig(w http.ResponseWriter, r *http.Request, organizationID OrganizationIDParameter, projectID ProjectIDParameter, clusterID VirtualKubernetesClusterIDParameter) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -471,7 +471,7 @@ func (siw *ServerInterfaceWrapper) DeleteApiV1OrganizationsOrganizationIDProject
 	}
 
 	// ------------- Path parameter "clusterID" -------------
-	var clusterID ClusterIDParameter
+	var clusterID KubernetesClusterIDParameter
 
 	err = runtime.BindStyledParameterWithOptions("simple", "clusterID", chi.URLParam(r, "clusterID"), &clusterID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -520,7 +520,7 @@ func (siw *ServerInterfaceWrapper) PutApiV1OrganizationsOrganizationIDProjectsPr
 	}
 
 	// ------------- Path parameter "clusterID" -------------
-	var clusterID ClusterIDParameter
+	var clusterID KubernetesClusterIDParameter
 
 	err = runtime.BindStyledParameterWithOptions("simple", "clusterID", chi.URLParam(r, "clusterID"), &clusterID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -569,7 +569,7 @@ func (siw *ServerInterfaceWrapper) GetApiV1OrganizationsOrganizationIDProjectsPr
 	}
 
 	// ------------- Path parameter "clusterID" -------------
-	var clusterID ClusterIDParameter
+	var clusterID KubernetesClusterIDParameter
 
 	err = runtime.BindStyledParameterWithOptions("simple", "clusterID", chi.URLParam(r, "clusterID"), &clusterID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -658,7 +658,7 @@ func (siw *ServerInterfaceWrapper) DeleteApiV1OrganizationsOrganizationIDProject
 	}
 
 	// ------------- Path parameter "clusterID" -------------
-	var clusterID ClusterIDParameter
+	var clusterID VirtualKubernetesClusterIDParameter
 
 	err = runtime.BindStyledParameterWithOptions("simple", "clusterID", chi.URLParam(r, "clusterID"), &clusterID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -707,7 +707,7 @@ func (siw *ServerInterfaceWrapper) PutApiV1OrganizationsOrganizationIDProjectsPr
 	}
 
 	// ------------- Path parameter "clusterID" -------------
-	var clusterID ClusterIDParameter
+	var clusterID VirtualKubernetesClusterIDParameter
 
 	err = runtime.BindStyledParameterWithOptions("simple", "clusterID", chi.URLParam(r, "clusterID"), &clusterID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {
@@ -756,7 +756,7 @@ func (siw *ServerInterfaceWrapper) GetApiV1OrganizationsOrganizationIDProjectsPr
 	}
 
 	// ------------- Path parameter "clusterID" -------------
-	var clusterID ClusterIDParameter
+	var clusterID VirtualKubernetesClusterIDParameter
 
 	err = runtime.BindStyledParameterWithOptions("simple", "clusterID", chi.URLParam(r, "clusterID"), &clusterID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true})
 	if err != nil {

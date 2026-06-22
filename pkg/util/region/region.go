@@ -27,7 +27,9 @@ import (
 	coreclient "github.com/unikorn-cloud/core/pkg/client"
 	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,8 +53,9 @@ func ControllerClient(ctx context.Context, cli client.Client, httpOptions *corec
 	return ctx, client, nil
 }
 
-// Region returns the chosen region by ID.
-func Region(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID, regionID string) (*regionapi.RegionDetailRead, error) {
+// Region returns the chosen region by ID. Callers carry the typed IDs to here
+// and convert to strings only at the genuine sinks below this layer.
+func Region(ctx context.Context, client regionapi.ClientWithResponsesInterface, organizationID identityids.OrganizationID, regionID regionids.RegionID) (*regionapi.RegionDetailRead, error) {
 	response, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
