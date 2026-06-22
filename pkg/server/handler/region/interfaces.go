@@ -22,13 +22,15 @@ package region
 import (
 	"context"
 
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
 type ClientInterface interface {
-	Get(ctx context.Context, organizationID, regionID string) (*regionapi.RegionDetailRead, error)
-	List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDRegionsParams) ([]regionapi.RegionRead, error)
-	Flavors(ctx context.Context, organizationID, regionID string) ([]regionapi.Flavor, error)
-	Images(ctx context.Context, organizationID, regionID string) ([]regionapi.Image, error)
+	Get(ctx context.Context, organizationID identityids.OrganizationID, regionID regionids.RegionID) (*regionapi.RegionDetailRead, error)
+	List(ctx context.Context, organizationID identityids.OrganizationID, params openapi.GetApiV1OrganizationsOrganizationIDRegionsParams) ([]regionapi.RegionRead, error)
+	Flavors(ctx context.Context, organizationID identityids.OrganizationID, regionID regionids.RegionID) ([]regionapi.Flavor, error)
+	Images(ctx context.Context, organizationID identityids.OrganizationID, regionID regionids.RegionID) ([]regionapi.Image, error)
 }

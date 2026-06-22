@@ -5,6 +5,9 @@ package openapi
 
 import (
 	externalRef0 "github.com/unikorn-cloud/core/pkg/openapi"
+	externalRef1 "github.com/unikorn-cloud/identity/pkg/openapi"
+	kubernetesids "github.com/unikorn-cloud/kubernetes/pkg/ids"
+	externalRef2 "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
 const (
@@ -16,6 +19,9 @@ const (
 	Physical RegionTypeParameter = "physical"
 	Virtual  RegionTypeParameter = "virtual"
 )
+
+// ClusterManagerId A cluster manager ID.
+type ClusterManagerId = kubernetesids.ClusterManagerID
 
 // ClusterManagerRead A cluster manager.
 type ClusterManagerRead struct {
@@ -138,6 +144,9 @@ type KubernetesClusterFeatures struct {
 	HardwareEnablement bool `json:"hardwareEnablement"`
 }
 
+// KubernetesClusterId A Kubernetes cluster ID.
+type KubernetesClusterId = kubernetesids.KubernetesClusterID
+
 // KubernetesClusterNetwork A Kubernetes cluster network settings.
 type KubernetesClusterNetwork struct {
 	// DnsNameservers A list of DNS name server to use.
@@ -191,8 +200,8 @@ type KubernetesClusterSpec struct {
 	// Networking A Kubernetes cluster network settings.
 	Networking *KubernetesClusterNetwork `json:"networking,omitempty"`
 
-	// RegionId The region to provision the cluster in.
-	RegionId string `json:"regionId"`
+	// RegionId A region ID.
+	RegionId externalRef2.RegionId `json:"regionId"`
 
 	// Version The Kubernetes version.  This should be derived from image metadata.
 	Version string `json:"version"`
@@ -232,9 +241,6 @@ type KubernetesClusterWrite struct {
 // KubernetesClusters A list of Kubernetes clusters.
 type KubernetesClusters = []KubernetesClusterRead
 
-// KubernetesNameParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type KubernetesNameParameter = string
-
 // MachinePool A Kubernetes cluster machine.
 type MachinePool struct {
 	// Disk A volume.
@@ -251,6 +257,9 @@ type MachinePool struct {
 // Kubernetes cluster hosted by another one.
 type RegionTypeParameter string
 
+// VirtualKubernetesClusterId A virtual Kubernetes cluster ID.
+type VirtualKubernetesClusterId = kubernetesids.VirtualKubernetesClusterID
+
 // VirtualKubernetesClusterRead Virtual Kubernetes cluster read.
 type VirtualKubernetesClusterRead struct {
 	// Metadata Metadata required by project scoped resource reads.
@@ -262,8 +271,8 @@ type VirtualKubernetesClusterRead struct {
 
 // VirtualKubernetesClusterSpec Virtual Kubernetes cluster creation parameters.
 type VirtualKubernetesClusterSpec struct {
-	// RegionId The region to provision the cluster in.
-	RegionId string `json:"regionId"`
+	// RegionId A region ID.
+	RegionId externalRef2.RegionId `json:"regionId"`
 
 	// WorkloadPools A set of virtual workload pools.
 	WorkloadPools VirtualKubernetesClusterWorkloadPools `json:"workloadPools"`
@@ -302,20 +311,23 @@ type Volume struct {
 	Size int `json:"size"`
 }
 
-// ClusterIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ClusterIDParameter = KubernetesNameParameter
+// ClusterManagerIDParameter A cluster manager ID.
+type ClusterManagerIDParameter = ClusterManagerId
 
-// ClusterManagerIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ClusterManagerIDParameter = KubernetesNameParameter
+// KubernetesClusterIDParameter A Kubernetes cluster ID.
+type KubernetesClusterIDParameter = KubernetesClusterId
 
-// OrganizationIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type OrganizationIDParameter = KubernetesNameParameter
+// OrganizationIDParameter An organization ID.
+type OrganizationIDParameter = externalRef1.OrganizationId
 
-// ProjectIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type ProjectIDParameter = KubernetesNameParameter
+// ProjectIDParameter A project ID.
+type ProjectIDParameter = externalRef1.ProjectId
 
-// RegionIDParameter A Kubernetes name. Must be a valid DNS containing only lower case characters, numbers or hyphens, start and end with a character or number, and be at most 63 characters in length.
-type RegionIDParameter = KubernetesNameParameter
+// RegionIDParameter A region ID.
+type RegionIDParameter = externalRef2.RegionId
+
+// VirtualKubernetesClusterIDParameter A virtual Kubernetes cluster ID.
+type VirtualKubernetesClusterIDParameter = VirtualKubernetesClusterId
 
 // ClusterManagerResponse A cluster manager.
 type ClusterManagerResponse = ClusterManagerRead

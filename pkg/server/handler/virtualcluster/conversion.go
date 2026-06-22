@@ -26,8 +26,10 @@ import (
 	coreerrors "github.com/unikorn-cloud/core/pkg/errors"
 	"github.com/unikorn-cloud/core/pkg/server/conversion"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -49,9 +51,9 @@ type generator struct {
 	// namespace the resource is provisioned in.
 	namespace string
 	// organizationID is the unique organization identifier.
-	organizationID string
+	organizationID identityids.OrganizationID
 	// projectID is the unique project identifier.
-	projectID string
+	projectID identityids.ProjectID
 	// existing is the existing cluster used to preserve options
 	// across updates.  This does two things, ensures we don't accidentally
 	// pick up new defaults, and we preserve any modifications that were
@@ -59,7 +61,7 @@ type generator struct {
 	existing *unikornv1.VirtualKubernetesCluster
 }
 
-func newGenerator(client client.Client, namespace, organizationID, projectID string) *generator {
+func newGenerator(client client.Client, namespace string, organizationID identityids.OrganizationID, projectID identityids.ProjectID) *generator {
 	return &generator{
 		client:         client,
 		namespace:      namespace,
@@ -97,27 +99,40 @@ func convertWorkloadPools(in *unikornv1.VirtualKubernetesCluster) []openapi.Virt
 }
 
 // convert converts from a custom resource into the API definition.
-func convert(in *unikornv1.VirtualKubernetesCluster) *openapi.VirtualKubernetesClusterRead {
+func convert(in *unikornv1.VirtualKubernetesCluster) (*openapi.VirtualKubernetesClusterRead, error) {
+	// The region ID is stored as a string on the CRD spec; parse it back to the
+	// typed ID for the read model. It was UUID-validated on the write path, so a
+	// malformed value here means a tampered resource and we fail closed.
+	regionID, err := regionids.ParseRegionID(in.Spec.RegionID)
+	if err != nil {
+		return nil, err
+	}
+
 	out := &openapi.VirtualKubernetesClusterRead{
 		Metadata: conversion.ProjectScopedResourceReadMetadata(in, in.Spec.Tags),
 		Spec: openapi.VirtualKubernetesClusterSpec{
-			RegionId:      in.Spec.RegionID,
+			RegionId:      regionID,
 			WorkloadPools: convertWorkloadPools(in),
 		},
 	}
 
-	return out
+	return out, nil
 }
 
-// uconvertList converts from a custom resource list into the API definition.
-func convertList(in *unikornv1.VirtualKubernetesClusterList) openapi.VirtualKubernetesClusters {
+// convertList converts from a custom resource list into the API definition.
+func convertList(in *unikornv1.VirtualKubernetesClusterList) (openapi.VirtualKubernetesClusters, error) {
 	out := make(openapi.VirtualKubernetesClusters, len(in.Items))
 
 	for i := range in.Items {
-		out[i] = *convert(&in.Items[i])
+		item, err := convert(&in.Items[i])
+		if err != nil {
+			return nil, err
+		}
+
+		out[i] = *item
 	}
 
-	return out
+	return out, nil
 }
 
 // defaultApplicationBundle returns a default application bundle.
@@ -188,17 +203,17 @@ func (g *generator) generate(ctx context.Context, appclient appBundleLister, req
 	}
 
 	out := &unikornv1.VirtualKubernetesCluster{
-		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace).WithOrganization(g.organizationID).WithProject(g.projectID).Get(),
+		ObjectMeta: conversion.NewObjectMetadata(&request.Metadata, g.namespace).Get(),
 		Spec: unikornv1.VirtualKubernetesClusterSpec{
 			Tags:                         conversion.GenerateTagList(request.Metadata.Tags),
-			RegionID:                     request.Spec.RegionId,
+			RegionID:                     request.Spec.RegionId.String(),
 			ApplicationBundle:            applicationBundle.Name,
 			ApplicationBundleAutoUpgrade: &unikornv1.ApplicationBundleAutoUpgradeSpec{},
 			WorkloadPools:                generateWorkloadPools(request),
 		},
 	}
 
-	if err := common.SetIdentityMetadata(ctx, &out.ObjectMeta); err != nil {
+	if err := common.SetIdentityMetadataProjectScope(ctx, &out.ObjectMeta, g.organizationID, g.projectID); err != nil {
 		return nil, fmt.Errorf("%w: failed to set identity metadata", err)
 	}
 

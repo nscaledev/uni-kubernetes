@@ -20,7 +20,6 @@ package virtualcluster
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/spf13/pflag"
 
@@ -32,12 +31,14 @@ import (
 	"github.com/unikorn-cloud/core/pkg/provisioners"
 	"github.com/unikorn-cloud/core/pkg/provisioners/remotecluster"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/virtualcluster"
 	regionutil "github.com/unikorn-cloud/kubernetes/pkg/util/region"
 	regionclient "github.com/unikorn-cloud/region/pkg/client"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	"k8s.io/client-go/tools/clientcmd"
@@ -47,8 +48,6 @@ import (
 )
 
 var (
-	ErrLabel = errors.New("required label missing")
-
 	ErrAnnotation = errors.New("required annotation missing")
 
 	ErrResourceDependency = errors.New("resource dependency error")
@@ -185,12 +184,20 @@ func (p *Provisioner) getRegionClient(ctx context.Context, traceName string) (co
 
 // getKubeconfig reads the kubeconfig from the Kubernetes region.
 func (p *Provisioner) getKubeconfig(ctx context.Context, client regionapi.ClientWithResponsesInterface) ([]byte, error) {
-	organizationID, ok := p.cluster.Labels[coreconstants.OrganizationLabel]
-	if !ok {
-		return nil, fmt.Errorf("%w: cluster missing organization ID", ErrLabel)
+	// Organization and region IDs are read from the cluster's labels and spec
+	// (plain strings); parse them to typed IDs for the region API call, failing
+	// closed on a malformed or missing value.
+	organizationID, err := identityids.ParseOrganizationID(p.cluster.Labels[coreconstants.OrganizationLabel])
+	if err != nil {
+		return nil, err
 	}
 
-	region, err := regionutil.Region(ctx, client, organizationID, p.cluster.Spec.RegionID)
+	regionID, err := regionids.ParseRegionID(p.cluster.Spec.RegionID)
+	if err != nil {
+		return nil, err
+	}
+
+	region, err := regionutil.Region(ctx, client, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}

@@ -53,7 +53,7 @@ paths:
       - oauth2Authentication: []
       responses:
         '200':
-          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.2/pkg/openapi/server.spec.yaml#/components/responses/regionsResponse'
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.4/pkg/openapi/server.spec.yaml#/components/responses/regionsResponse'
         '400':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/v1.17.1/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
         '401':
@@ -76,7 +76,7 @@ paths:
       - oauth2Authentication: []
       responses:
         '200':
-          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.2/pkg/openapi/server.spec.yaml#/components/responses/flavorsResponse'
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.4/pkg/openapi/server.spec.yaml#/components/responses/flavorsResponse'
         '400':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/v1.17.1/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
         '401':
@@ -101,7 +101,7 @@ paths:
       - oauth2Authentication: []
       responses:
         '200':
-          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.2/pkg/openapi/server.spec.yaml#/components/responses/imagesResponse'
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.4/pkg/openapi/server.spec.yaml#/components/responses/imagesResponse'
         '400':
           $ref: 'https://raw.githubusercontent.com/unikorn-cloud/core/v1.17.1/pkg/openapi/common.spec.yaml#/components/responses/badRequestResponse'
         '401':
@@ -278,7 +278,7 @@ paths:
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/projectIDParameter'
-    - $ref: '#/components/parameters/clusterIDParameter'
+    - $ref: '#/components/parameters/kubernetesClusterIDParameter'
     put:
       x-hidden: true
       description: |-
@@ -324,7 +324,7 @@ paths:
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/projectIDParameter'
-    - $ref: '#/components/parameters/clusterIDParameter'
+    - $ref: '#/components/parameters/kubernetesClusterIDParameter'
     get:
       x-hidden: true
       description: |-
@@ -399,7 +399,7 @@ paths:
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/projectIDParameter'
-    - $ref: '#/components/parameters/clusterIDParameter'
+    - $ref: '#/components/parameters/virtualKubernetesClusterIDParameter'
     put:
       x-hidden: true
       description: |-
@@ -445,7 +445,7 @@ paths:
     parameters:
     - $ref: '#/components/parameters/organizationIDParameter'
     - $ref: '#/components/parameters/projectIDParameter'
-    - $ref: '#/components/parameters/clusterIDParameter'
+    - $ref: '#/components/parameters/virtualKubernetesClusterIDParameter'
     get:
       x-hidden: true
       description: |-
@@ -474,7 +474,7 @@ components:
         The organization ID.
       required: true
       schema:
-        $ref: '#/components/schemas/kubernetesNameParameter'
+        $ref: 'https://raw.githubusercontent.com/unikorn-cloud/identity/v1.17.7/pkg/openapi/server.spec.yaml#/components/schemas/organizationId'
     projectIDParameter:
       name: projectID
       in: path
@@ -482,14 +482,14 @@ components:
         The project ID.
       required: true
       schema:
-        $ref: '#/components/schemas/kubernetesNameParameter'
+        $ref: 'https://raw.githubusercontent.com/unikorn-cloud/identity/v1.17.7/pkg/openapi/server.spec.yaml#/components/schemas/projectId'
     regionIDParameter:
       name: regionID
       in: path
       description: The region ID.
       required: true
       schema:
-        $ref: '#/components/schemas/kubernetesNameParameter'
+        $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.4/pkg/openapi/server.spec.yaml#/components/schemas/regionId'
     clusterManagerIDParameter:
       name: clusterManagerID
       in: path
@@ -497,15 +497,23 @@ components:
         The cluster manager ID.
       required: true
       schema:
-        $ref: '#/components/schemas/kubernetesNameParameter'
-    clusterIDParameter:
+        $ref: '#/components/schemas/clusterManagerId'
+    kubernetesClusterIDParameter:
       name: clusterID
       in: path
       description: |-
-        The cluster ID.
+        The Kubernetes cluster ID.
       required: true
       schema:
-        $ref: '#/components/schemas/kubernetesNameParameter'
+        $ref: '#/components/schemas/kubernetesClusterId'
+    virtualKubernetesClusterIDParameter:
+      name: clusterID
+      in: path
+      description: |-
+        The virtual Kubernetes cluster ID.
+      required: true
+      schema:
+        $ref: '#/components/schemas/virtualKubernetesClusterId'
     regionTypeParameter:
       name: regionType
       in: query
@@ -520,6 +528,30 @@ components:
       type: string
       minLength: 1
       maxLength: 63
+    kubernetesClusterId:
+      description: A Kubernetes cluster ID.
+      type: string
+      format: uuid
+      x-go-type: kubernetesids.KubernetesClusterID
+      x-go-type-import:
+        name: kubernetesids
+        path: github.com/unikorn-cloud/kubernetes/pkg/ids
+    virtualKubernetesClusterId:
+      description: A virtual Kubernetes cluster ID.
+      type: string
+      format: uuid
+      x-go-type: kubernetesids.VirtualKubernetesClusterID
+      x-go-type-import:
+        name: kubernetesids
+        path: github.com/unikorn-cloud/kubernetes/pkg/ids
+    clusterManagerId:
+      description: A cluster manager ID.
+      type: string
+      format: uuid
+      x-go-type: kubernetesids.ClusterManagerID
+      x-go-type-import:
+        name: kubernetesids
+        path: github.com/unikorn-cloud/kubernetes/pkg/ids
     regionTypeParameter:
       description: |-
         The region type. "physical" means a full Kubernetes cluster deployment, "virtual" is a virtual
@@ -744,8 +776,7 @@ components:
       - workloadPools
       properties:
         regionId:
-          description: The region to provision the cluster in.
-          type: string
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.4/pkg/openapi/server.spec.yaml#/components/schemas/regionId'
         clusterManagerId:
           description: |-
             The name of the cluster manager to use, if one is not specified
@@ -805,8 +836,7 @@ components:
       - workloadPools
       properties:
         regionId:
-          description: The region to provision the cluster in.
-          type: string
+          $ref: 'https://raw.githubusercontent.com/unikorn-cloud/region/v1.17.4/pkg/openapi/server.spec.yaml#/components/schemas/regionId'
         workloadPools:
           $ref: '#/components/schemas/virtualKubernetesClusterWorkloadPools'
     virtualKubernetesClusterWorkloadPools:

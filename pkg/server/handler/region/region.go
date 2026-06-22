@@ -24,7 +24,9 @@ import (
 	"slices"
 
 	servererrors "github.com/unikorn-cloud/core/pkg/server/errors"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	"k8s.io/utils/ptr"
@@ -67,7 +69,7 @@ func (c *Client) Client() regionapi.ClientWithResponsesInterface {
 }
 
 // Get gets a specific region.
-func (c *Client) Get(ctx context.Context, organizationID, regionID string) (*regionapi.RegionDetailRead, error) {
+func (c *Client) Get(ctx context.Context, organizationID identityids.OrganizationID, regionID regionids.RegionID) (*regionapi.RegionDetailRead, error) {
 	// TODO: Danger, danger, this returns possible sensitive information that must not
 	// be leaked.  Add the correct API.
 	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(ctx, organizationID, regionID)
@@ -82,7 +84,7 @@ func (c *Client) Get(ctx context.Context, organizationID, regionID string) (*reg
 	return resp.JSON200, nil
 }
 
-func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.RegionRead, error) {
+func (c *Client) list(ctx context.Context, organizationID identityids.OrganizationID) ([]regionapi.RegionRead, error) {
 	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(ctx, organizationID)
 	if err != nil {
 		return nil, err
@@ -98,7 +100,7 @@ func (c *Client) list(ctx context.Context, organizationID string) ([]regionapi.R
 }
 
 // List lists all regions.
-func (c *Client) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDRegionsParams) ([]regionapi.RegionRead, error) {
+func (c *Client) List(ctx context.Context, organizationID identityids.OrganizationID, params openapi.GetApiV1OrganizationsOrganizationIDRegionsParams) ([]regionapi.RegionRead, error) {
 	regions, err := c.list(ctx, organizationID)
 	if err != nil {
 		return nil, err
@@ -113,7 +115,7 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 }
 
 // Flavors returns all Kubernetes compatible flavors.
-func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) ([]regionapi.Flavor, error) {
+func (c *Client) Flavors(ctx context.Context, organizationID identityids.OrganizationID, regionID regionids.RegionID) ([]regionapi.Flavor, error) {
 	resp, err := c.client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
@@ -140,9 +142,9 @@ func (c *Client) Flavors(ctx context.Context, organizationID, regionID string) (
 // ready (e.g. still uploading) so that a freshly created image is selectable
 // immediately; the cluster provisioner gates on readiness and holds provisioning
 // until the selected image becomes ready.
-func (c *Client) Images(ctx context.Context, organizationID, regionID string) ([]regionapi.Image, error) {
+func (c *Client) Images(ctx context.Context, organizationID identityids.OrganizationID, regionID regionids.RegionID) ([]regionapi.Image, error) {
 	params := &regionapi.GetApiV2RegionsRegionIDImagesParams{
-		OrganizationID: &regionapi.OrganizationIDQueryParameter{organizationID},
+		OrganizationID: &regionapi.OrganizationIDQueryParameter{organizationID.String()},
 		Scope:          ptr.To(regionapi.GetApiV2RegionsRegionIDImagesParamsScopeAvailable),
 		Status: &regionapi.ImageStatusQueryParameter{
 			regionapi.ImageStateReady,

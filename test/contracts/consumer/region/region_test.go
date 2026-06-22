@@ -32,6 +32,8 @@ import (
 
 	coreclient "github.com/unikorn-cloud/core/pkg/openapi"
 	contract "github.com/unikorn-cloud/core/pkg/testing/contract"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 )
 
@@ -113,7 +115,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDDetailWithResponse(
-						ctx, organizationID, regionID)
+						ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID))
 					if err != nil {
 						return fmt.Errorf("getting region detail: %w", err)
 					}
@@ -156,7 +158,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsWithResponse(
-						ctx, organizationID)
+						ctx, identityids.MustParseOrganizationID(organizationID))
 					if err != nil {
 						return fmt.Errorf("listing regions: %w", err)
 					}
@@ -205,7 +207,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDFlavorsWithResponse(
-						ctx, organizationID, regionID)
+						ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID))
 					if err != nil {
 						return fmt.Errorf("listing flavors: %w", err)
 					}
@@ -252,7 +254,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDImagesWithResponse(
-						ctx, organizationID, regionID)
+						ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID))
 					if err != nil {
 						return fmt.Errorf("listing images: %w", err)
 					}
@@ -320,12 +322,12 @@ var _ = Describe("Region Service Contract", func() {
 							Description: func() *string { s := "Identity for Kubernetes cluster"; return &s }(),
 						},
 						Spec: regionapi.IdentityWriteSpec{
-							RegionId: regionID,
+							RegionId: regionids.MustParseRegionID(regionID),
 						},
 					}
 
 					resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesWithResponse(
-						ctx, organizationID, projectID, identityReq)
+						ctx, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), identityReq)
 					if err != nil {
 						return fmt.Errorf("creating identity: %w", err)
 					}
@@ -383,7 +385,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(
-						ctx, organizationID, projectID, identityID)
+						ctx, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), regionids.MustParseIdentityID(identityID))
 					if err != nil {
 						return fmt.Errorf("getting identity: %w", err)
 					}
@@ -421,7 +423,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.DeleteApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDWithResponse(
-						ctx, organizationID, projectID, identityID)
+						ctx, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), regionids.MustParseIdentityID(identityID))
 					if err != nil {
 						return fmt.Errorf("deleting identity: %w", err)
 					}
@@ -496,7 +498,7 @@ var _ = Describe("Region Service Contract", func() {
 					}
 
 					resp, err := client.PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(
-						ctx, organizationID, projectID, identityID, networkReq)
+						ctx, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), regionids.MustParseIdentityID(identityID), networkReq)
 					if err != nil {
 						return fmt.Errorf("creating network: %w", err)
 					}
@@ -555,7 +557,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.GetApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksNetworkIDWithResponse(
-						ctx, organizationID, projectID, identityID, networkID)
+						ctx, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), regionids.MustParseIdentityID(identityID), regionids.MustParseNetworkID(networkID))
 					if err != nil {
 						return fmt.Errorf("getting network: %w", err)
 					}
@@ -595,7 +597,7 @@ var _ = Describe("Region Service Contract", func() {
 
 				test := withRegionClient(ctx, func(client *regionapi.ClientWithResponses) error {
 					resp, err := client.GetApiV1OrganizationsOrganizationIDRegionsRegionIDExternalnetworksWithResponse(
-						ctx, organizationID, regionID)
+						ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID))
 					if err != nil {
 						return fmt.Errorf("listing external networks: %w", err)
 					}

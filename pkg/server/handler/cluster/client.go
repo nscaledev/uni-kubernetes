@@ -38,13 +38,16 @@ import (
 	"github.com/unikorn-cloud/core/pkg/util/retry"
 	identityclient "github.com/unikorn-cloud/identity/pkg/client"
 	"github.com/unikorn-cloud/identity/pkg/handler/common"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	identityapi "github.com/unikorn-cloud/identity/pkg/openapi"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
+	kubernetesids "github.com/unikorn-cloud/kubernetes/pkg/ids"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/clusteropenstack"
 	"github.com/unikorn-cloud/kubernetes/pkg/provisioners/helmapplications/vcluster"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/clustermanager"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/region"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	corev1 "k8s.io/api/core/v1"
@@ -111,10 +114,10 @@ func NewClient(client client.Client, options *Options, identity identityapi.Clie
 }
 
 // List returns all clusters owned by the implicit control plane.
-func (c *Client) List(ctx context.Context, organizationID string, params openapi.GetApiV1OrganizationsOrganizationIDClustersParams) (openapi.KubernetesClusters, error) {
+func (c *Client) List(ctx context.Context, organizationID identityids.OrganizationID, params openapi.GetApiV1OrganizationsOrganizationIDClustersParams) (openapi.KubernetesClusters, error) {
 	result := &unikornv1.KubernetesClusterList{}
 
-	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID})
+	requirement, err := labels.NewRequirement(constants.OrganizationLabel, selection.Equals, []string{organizationID.String()})
 	if err != nil {
 		return nil, fmt.Errorf("%w: failed to build label selector", err)
 	}
@@ -141,14 +144,14 @@ func (c *Client) List(ctx context.Context, organizationID string, params openapi
 
 	slices.SortStableFunc(result.Items, unikornv1.CompareKubernetesCluster)
 
-	return convertList(result), nil
+	return convertList(result)
 }
 
 // get returns the cluster.
-func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikornv1.KubernetesCluster, error) {
+func (c *Client) get(ctx context.Context, namespace string, clusterID kubernetesids.KubernetesClusterID) (*unikornv1.KubernetesCluster, error) {
 	result := &unikornv1.KubernetesCluster{}
 
-	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterID}, result); err != nil {
+	if err := c.client.Get(ctx, client.ObjectKey{Namespace: namespace, Name: clusterID.String()}, result); err != nil {
 		if kerrors.IsNotFound(err) {
 			return nil, errors.HTTPNotFound().WithError(err)
 		}
@@ -160,7 +163,7 @@ func (c *Client) get(ctx context.Context, namespace, clusterID string) (*unikorn
 }
 
 // GetKubeconfig returns the kubernetes configuation associated with a cluster.
-func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, clusterID string) ([]byte, error) {
+func (c *Client) GetKubeconfig(ctx context.Context, organizationID identityids.OrganizationID, projectID identityids.ProjectID, clusterID kubernetesids.KubernetesClusterID) ([]byte, error) {
 	project, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -192,7 +195,7 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 	}
 
 	objectKey := client.ObjectKey{
-		Namespace: clusterID,
+		Namespace: clusterID.String(),
 		Name:      clusteropenstack.KubeconfigSecretName(cluster),
 	}
 
@@ -209,8 +212,15 @@ func (c *Client) GetKubeconfig(ctx context.Context, organizationID, projectID, c
 	return secret.Data["value"], nil
 }
 
-func (c *Client) generateAllocations(ctx context.Context, organizationID string, resource *unikornv1.KubernetesCluster) (identityapi.ResourceAllocationList, error) {
-	flavors, err := c.region.Flavors(ctx, organizationID, resource.Spec.RegionID)
+func (c *Client) generateAllocations(ctx context.Context, organizationID identityids.OrganizationID, resource *unikornv1.KubernetesCluster) (identityapi.ResourceAllocationList, error) {
+	// The region ID is read back from the CRD spec (a string sink) so parse it to
+	// the typed ID for the region API call, failing closed on a malformed value.
+	regionID, err := regionids.ParseRegionID(resource.Spec.RegionID)
+	if err != nil {
+		return nil, err
+	}
+
+	flavors, err := c.region.Flavors(ctx, organizationID, regionID)
 	if err != nil {
 		return nil, err
 	}
@@ -275,7 +285,7 @@ func (c *Client) generateAllocations(ctx context.Context, organizationID string,
 	return allocations, nil
 }
 
-func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, regionID, clusterID string) (*regionapi.IdentityRead, error) {
+func (c *Client) createIdentity(ctx context.Context, organizationID identityids.OrganizationID, projectID identityids.ProjectID, regionID regionids.RegionID, clusterID string) (*regionapi.IdentityRead, error) {
 	tags := coreapi.TagList{
 		coreapi.Tag{
 			Name:  constants.KubernetesClusterLabel,
@@ -306,7 +316,7 @@ func (c *Client) createIdentity(ctx context.Context, organizationID, projectID, 
 	return resp.JSON201, nil
 }
 
-func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizationID, projectID string, cluster *unikornv1.KubernetesCluster, identity *regionapi.IdentityRead) (*regionapi.NetworkRead, error) {
+func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizationID identityids.OrganizationID, projectID identityids.ProjectID, cluster *unikornv1.KubernetesCluster, identity *regionapi.IdentityRead) (*regionapi.NetworkRead, error) {
 	tags := coreapi.TagList{
 		coreapi.Tag{
 			Name:  constants.KubernetesClusterLabel,
@@ -332,7 +342,14 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 		},
 	}
 
-	resp, err := c.region.Client().PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identity.Metadata.Id, request)
+	// The identity ID comes from the region read model (a string) so parse it to
+	// the typed ID for the region API call, failing closed on a malformed value.
+	identityID, err := regionids.ParseIdentityID(identity.Metadata.Id)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.region.Client().PostApiV1OrganizationsOrganizationIDProjectsProjectIDIdentitiesIdentityIDNetworksWithResponse(ctx, organizationID, projectID, identityID, request)
 	if err != nil {
 		return nil, fmt.Errorf("%w: unable to physical network", err)
 	}
@@ -344,7 +361,7 @@ func (c *Client) createPhysicalNetworkOpenstack(ctx context.Context, organizatio
 	return resp.JSON201, nil
 }
 
-func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID, projectID, regionID string, identity *regionapi.IdentityRead, cluster *unikornv1.KubernetesCluster) error {
+func (c *Client) applyCloudSpecificConfiguration(ctx context.Context, organizationID identityids.OrganizationID, projectID identityids.ProjectID, regionID regionids.RegionID, identity *regionapi.IdentityRead, cluster *unikornv1.KubernetesCluster) error {
 	// Save the identity ID for later cleanup.
 	if cluster.Annotations == nil {
 		cluster.Annotations = map[string]string{}
@@ -445,7 +462,7 @@ func (c *Client) getClusterManager(ctx context.Context, namespace string, reques
 	return clusterManager, nil
 }
 
-func (c *Client) getOrCreateClusterManager(ctx context.Context, appclient appBundleListerPlus, organizationID, projectID string, namespace string, request *openapi.KubernetesClusterWrite) (*unikornv1.ClusterManager, error) {
+func (c *Client) getOrCreateClusterManager(ctx context.Context, appclient appBundleListerPlus, organizationID identityids.OrganizationID, projectID identityids.ProjectID, namespace string, request *openapi.KubernetesClusterWrite) (*unikornv1.ClusterManager, error) {
 	if request.Spec.ClusterManagerId != nil {
 		return c.getClusterManager(ctx, namespace, request)
 	}
@@ -461,7 +478,7 @@ func (c *Client) getOrCreateClusterManager(ctx context.Context, appclient appBun
 }
 
 // Create creates the implicit cluster identified by the JTW claims.
-func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, organizationID, projectID string, request *openapi.KubernetesClusterWrite) (*openapi.KubernetesClusterRead, error) {
+func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, organizationID identityids.OrganizationID, projectID identityids.ProjectID, request *openapi.KubernetesClusterWrite) (*openapi.KubernetesClusterRead, error) {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return nil, err
@@ -499,11 +516,11 @@ func (c *Client) Create(ctx context.Context, appclient appBundleListerPlus, orga
 		return nil, fmt.Errorf("%w: failed to create cluster", err)
 	}
 
-	return convert(cluster), nil
+	return convert(cluster)
 }
 
 // Delete deletes the implicit cluster identified by the JTW claims.
-func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterID string) error {
+func (c *Client) Delete(ctx context.Context, organizationID identityids.OrganizationID, projectID identityids.ProjectID, clusterID kubernetesids.KubernetesClusterID) error {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err
@@ -530,7 +547,7 @@ func (c *Client) Delete(ctx context.Context, organizationID, projectID, clusterI
 }
 
 // Update implements read/modify/write for the cluster.
-func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID, projectID, clusterID string, request *openapi.KubernetesClusterWrite) error {
+func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID identityids.OrganizationID, projectID identityids.ProjectID, clusterID kubernetesids.KubernetesClusterID, request *openapi.KubernetesClusterWrite) error {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
 	if err != nil {
 		return err

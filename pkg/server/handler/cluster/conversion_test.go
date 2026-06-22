@@ -31,11 +31,13 @@ import (
 	"github.com/unikorn-cloud/core/pkg/constants"
 	coreapi "github.com/unikorn-cloud/core/pkg/openapi"
 	"github.com/unikorn-cloud/identity/pkg/handler/common/fixtures"
+	identityids "github.com/unikorn-cloud/identity/pkg/ids"
 	unikornv1 "github.com/unikorn-cloud/kubernetes/pkg/apis/unikorn/v1alpha1"
 	"github.com/unikorn-cloud/kubernetes/pkg/internal/applicationbundle"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler/cluster"
 	region "github.com/unikorn-cloud/kubernetes/pkg/server/handler/region/mock"
+	regionids "github.com/unikorn-cloud/region/pkg/ids"
 	regionapi "github.com/unikorn-cloud/region/pkg/openapi"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,7 +169,7 @@ func clusterRequestFixture(version string) *openapi.KubernetesClusterWrite {
 			Name: clusterName,
 		},
 		Spec: openapi.KubernetesClusterSpec{
-			RegionId:              regionID,
+			RegionId:              regionids.MustParseRegionID(regionID),
 			Version:               version,
 			ApplicationBundleName: ptr.To(expectedBundleName(versionOldest)),
 			ClusterManagerId:      ptr.To(clustermanagerID),
@@ -280,7 +282,7 @@ func TestApplicationBundleNameGenerationCreateDefault(t *testing.T) {
 
 	c := newClient(t)
 
-	g := cluster.NewGenerator(c, nil, nil, "", "", "")
+	g := cluster.NewGenerator(c, nil, nil, "", identityids.OrganizationID{}, identityids.ProjectID{})
 
 	request := &openapi.KubernetesClusterWrite{
 		Spec: openapi.KubernetesClusterSpec{},
@@ -303,7 +305,7 @@ func TestApplicationBundleNameGenerationCreateExplicit(t *testing.T) {
 
 	c := newClient(t)
 
-	g := cluster.NewGenerator(c, nil, nil, "", "", "")
+	g := cluster.NewGenerator(c, nil, nil, "", identityids.OrganizationID{}, identityids.ProjectID{})
 
 	request := &openapi.KubernetesClusterWrite{
 		Spec: openapi.KubernetesClusterSpec{
@@ -334,7 +336,7 @@ func TestApplicationBundleNameGenerationUpdateDefault(t *testing.T) {
 		},
 	}
 
-	g := cluster.NewGenerator(c, nil, nil, "", "", "")
+	g := cluster.NewGenerator(c, nil, nil, "", identityids.OrganizationID{}, identityids.ProjectID{})
 	g = cluster.WithExisting(g, existing)
 
 	request := &openapi.KubernetesClusterWrite{
@@ -364,7 +366,7 @@ func TestApplicationBundleNameGenerationUpdateExplicit(t *testing.T) {
 		},
 	}
 
-	g := cluster.NewGenerator(c, nil, nil, "", "", "")
+	g := cluster.NewGenerator(c, nil, nil, "", identityids.OrganizationID{}, identityids.ProjectID{})
 	g = cluster.WithExisting(g, existing)
 
 	request := &openapi.KubernetesClusterWrite{
@@ -397,10 +399,10 @@ func TestClusterGenerate(t *testing.T) {
 	appclient := applicationbundle.NewClient(c, defaultNamespace)
 
 	region := region.NewMockClientInterface(ctrl)
-	region.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(flavorFixtures(), nil)
-	region.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(imageFixtures(), nil)
+	region.EXPECT().Flavors(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(flavorFixtures(), nil)
+	region.EXPECT().Images(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(imageFixtures(), nil)
 
-	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
+	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID))
 
 	cluster, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), clusterRequestFixture(kubernetesVersion2))
 	require.NoError(t, err)
@@ -445,10 +447,10 @@ func TestClusterUpgrade(t *testing.T) {
 	appclient := applicationbundle.NewClient(c, defaultNamespace)
 
 	region := region.NewMockClientInterface(ctrl)
-	region.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(flavorFixtures(), nil)
-	region.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(imageFixtures(), nil)
+	region.EXPECT().Flavors(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(flavorFixtures(), nil)
+	region.EXPECT().Images(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(imageFixtures(), nil)
 
-	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
+	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID))
 	g = cluster.WithExisting(g, existingClusterFixture(t, kubernetesVersion1))
 
 	cluster, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), clusterRequestFixture(kubernetesVersion3))
@@ -495,8 +497,8 @@ func TestClusterUpdatePreservesHardwareEnablementWhenFeatureFieldOmitted(t *test
 	appclient := applicationbundle.NewClient(c, defaultNamespace)
 
 	region := region.NewMockClientInterface(ctrl)
-	region.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(flavorFixtures(), nil)
-	region.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(imageFixtures(), nil)
+	region.EXPECT().Flavors(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(flavorFixtures(), nil)
+	region.EXPECT().Images(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(imageFixtures(), nil)
 
 	existing := existingClusterFixture(t, kubernetesVersion1)
 	existing.Spec.Features = &unikornv1.KubernetesClusterFeaturesSpec{
@@ -504,7 +506,7 @@ func TestClusterUpdatePreservesHardwareEnablementWhenFeatureFieldOmitted(t *test
 		GPUOperator: true,
 	}
 
-	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
+	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID))
 	g = cluster.WithExisting(g, existing)
 
 	request := clusterRequestFixture(kubernetesVersion1)
@@ -547,13 +549,13 @@ func TestClusterGenerateSelectsImageMatchingFlavorArchitecture(t *testing.T) {
 	)
 
 	r := region.NewMockClientInterface(ctrl)
-	r.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(mixedFlavors, nil)
-	r.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(mixedImages, nil)
+	r.EXPECT().Flavors(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(mixedFlavors, nil)
+	r.EXPECT().Images(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(mixedImages, nil)
 
 	// Request uses flavorID1 (arm64) for the workload pool.
 	request := clusterRequestFixture(kubernetesVersion2)
 
-	g := cluster.NewGenerator(c, newGeneratorOptions(), r, defaultNamespace, organizationID, projectID)
+	g := cluster.NewGenerator(c, newGeneratorOptions(), r, defaultNamespace, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID))
 
 	result, err := cluster.Generate(ctx, g, appclient, clusterManagerFixture(), request)
 	require.NoError(t, err)
@@ -586,8 +588,8 @@ func TestClusterUpdateAppliesExplicitHardwareEnablementSetting(t *testing.T) {
 	appclient := applicationbundle.NewClient(c, defaultNamespace)
 
 	region := region.NewMockClientInterface(ctrl)
-	region.EXPECT().Flavors(ctx, organizationID, regionID).AnyTimes().Return(flavorFixtures(), nil)
-	region.EXPECT().Images(ctx, organizationID, regionID).AnyTimes().Return(imageFixtures(), nil)
+	region.EXPECT().Flavors(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(flavorFixtures(), nil)
+	region.EXPECT().Images(ctx, identityids.MustParseOrganizationID(organizationID), regionids.MustParseRegionID(regionID)).AnyTimes().Return(imageFixtures(), nil)
 
 	existing := existingClusterFixture(t, kubernetesVersion1)
 	existing.Spec.Features = &unikornv1.KubernetesClusterFeaturesSpec{
@@ -595,7 +597,7 @@ func TestClusterUpdateAppliesExplicitHardwareEnablementSetting(t *testing.T) {
 		GPUOperator: false,
 	}
 
-	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, organizationID, projectID)
+	g := cluster.NewGenerator(c, newGeneratorOptions(), region, defaultNamespace, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID))
 	g = cluster.WithExisting(g, existing)
 
 	request := clusterRequestFixture(kubernetesVersion1)
