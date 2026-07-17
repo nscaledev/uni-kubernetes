@@ -63,6 +63,14 @@ monitor:
 server:
   # An array of extra flags to append to the server configuration.
   extraFlags: ~
+  # authorizationEngineMode selects how the API server serves authorization
+  # decisions: "off" (the server default when unset — local ACL walk), "shadow"
+  # (serve legacy, evaluate the remote central PDP and log divergence), or
+  # "enforce" (remote PDP authoritative). Unset omits the flag (server default).
+  authorizationEngineMode: ~
+  # authorizationCheckTimeout bounds each remote authorization check (a Go
+  # duration string, e.g. "250ms"). Unset omits the flag (server default 250ms).
+  authorizationCheckTimeout: ~
   # Allows override of the global default image.
   image:
   # Allows resource limits to be set.

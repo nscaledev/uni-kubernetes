@@ -24,6 +24,12 @@ spec:
         {{- include "unikorn.identity.flags" . | nindent 8 }}
         {{- include "unikorn.region.flags" . | nindent 8 }}
         {{- include "unikorn.mtls.flags" . | nindent 8 }}
+        {{- if .Values.server.authorizationEngineMode }}
+        - --authorization-engine-mode={{ .Values.server.authorizationEngineMode }}
+        {{- end }}
+        {{- if .Values.server.authorizationCheckTimeout }}
+        - --authorization-check-timeout={{ .Values.server.authorizationCheckTimeout }}
+        {{- end }}
         {{- range $i, $arg := .Values.server.extraFlags }}
         - {{ $arg }}
         {{- end }}

@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/pprof"
+	"time"
 
 	chi "github.com/go-chi/chi/v5"
 	"github.com/spf13/pflag"
@@ -38,6 +39,7 @@ import (
 	"github.com/unikorn-cloud/identity/pkg/middleware/audit"
 	openapimiddleware "github.com/unikorn-cloud/identity/pkg/middleware/openapi"
 	openapimiddlewareremote "github.com/unikorn-cloud/identity/pkg/middleware/openapi/remote"
+	rbac "github.com/unikorn-cloud/identity/pkg/rbac"
 	"github.com/unikorn-cloud/kubernetes/pkg/constants"
 	"github.com/unikorn-cloud/kubernetes/pkg/openapi"
 	"github.com/unikorn-cloud/kubernetes/pkg/server/handler"
@@ -70,6 +72,14 @@ type Server struct {
 
 	// OpenAPIOptions are for OpenAPI processing.
 	OpenAPIOptions openapimiddleware.Options
+
+	// AuthorizationEngineMode selects how Allow* decisions are served: "off"
+	// (local ACL walk, the default), "shadow" (serve legacy, evaluate the
+	// remote central PDP alongside and log divergence), or "enforce" (remote
+	// PDP authoritative).
+	AuthorizationEngineMode string
+	// AuthorizationCheckTimeout bounds each remote authorization check.
+	AuthorizationCheckTimeout time.Duration
 }
 
 func (s *Server) AddFlags(flags *pflag.FlagSet) {
@@ -89,6 +99,11 @@ func (s *Server) AddFlags(flags *pflag.FlagSet) {
 	s.IdentityOptions.AddFlags(flags)
 	s.RegionOptions.AddFlags(flags)
 	s.OpenAPIOptions.AddFlags(flags)
+
+	flags.StringVar(&s.AuthorizationEngineMode, "authorization-engine-mode", "off",
+		"How authorization decisions are served: off (local ACL walk), shadow (serve legacy, evaluate the remote central PDP and log divergence), or enforce (remote PDP authoritative).")
+	flags.DurationVar(&s.AuthorizationCheckTimeout, "authorization-check-timeout", 250*time.Millisecond,
+		"Hard per-call deadline for a remote authorization check.")
 }
 
 func (s *Server) SetupLogging() {
@@ -100,6 +115,25 @@ func (s *Server) SetupLogging() {
 // TODO: move config into an otel specific options struct.
 func (s *Server) SetupOpenTelemetry(ctx context.Context) error {
 	return s.CoreOptions.SetupOpenTelemetry(ctx)
+}
+
+// remoteAuthorizerOptions parses AuthorizationEngineMode and assembles the
+// openapimiddlewareremote.Option list passed to NewAuthorizer.
+func (s *Server) remoteAuthorizerOptions() ([]openapimiddlewareremote.Option, error) {
+	mode, err := rbac.ParseRemoteMode(s.AuthorizationEngineMode)
+	if err != nil {
+		return nil, err
+	}
+
+	authorizerOptions := []openapimiddlewareremote.Option{openapimiddlewareremote.WithRemoteEngineMode(mode)}
+
+	// Never pass a non-positive timeout -- that would DISABLE the guardrail
+	// (WithCheckTimeout(0) means no deadline); the engine's 250ms default holds.
+	if s.AuthorizationCheckTimeout > 0 {
+		authorizerOptions = append(authorizerOptions, openapimiddlewareremote.WithCheckTimeout(s.AuthorizationCheckTimeout))
+	}
+
+	return authorizerOptions, nil
 }
 
 func (s *Server) GetServer(client client.Client) (*http.Server, error) {
@@ -151,7 +185,12 @@ func (s *Server) GetServer(client client.Client) (*http.Server, error) {
 	router.NotFound(http.HandlerFunc(handler.NotFound))
 	router.MethodNotAllowed(http.HandlerFunc(handler.MethodNotAllowed))
 
-	authorizer, err := openapimiddlewareremote.NewAuthorizer(client, s.IdentityOptions, &s.ClientOptions)
+	authorizerOptions, err := s.remoteAuthorizerOptions()
+	if err != nil {
+		return nil, err
+	}
+
+	authorizer, err := openapimiddlewareremote.NewAuthorizer(client, s.IdentityOptions, &s.ClientOptions, authorizerOptions...)
 	if err != nil {
 		return nil, err
 	}

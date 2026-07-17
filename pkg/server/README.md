@@ -11,6 +11,15 @@ Please ensure updated generated code is commited with your pull request.
 
 Consult the [OpenAPI schema](../../pkg/openapi/server.spec.yaml) for full details of what it does.
 
+## Authorization
+
+The remote authorizer's decision mode is configurable via `--authorization-engine-mode`
+(`off`/`shadow`/`enforce`, default `off`) and `--authorization-check-timeout` (default
+`250ms`). `off` preserves the authorizer's original behavior (local ACL walk, no remote
+PDP consulted); `shadow` additionally evaluates identity's central PDP and logs
+divergence without changing the served verdict; `enforce` makes the remote PDP
+authoritative.
+
 ## Getting Started with Development and Testing.
 
 Once everything is up and running, grab the IP address:
