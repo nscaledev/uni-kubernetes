@@ -77,6 +77,9 @@ func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersio
 		"kubeProxyReplacement": "true",
 		"k8sServiceHost":       clusterContext.Host,
 		"k8sServicePort":       clusterContext.Port,
+		"socketLB": map[string]any{
+			"hostNamespaceOnly": true,
+		},
 		"hubble": map[string]any{
 			"relay": map[string]any{
 				"nodeSelector": util.ControlPlaneNodeSelector(),
