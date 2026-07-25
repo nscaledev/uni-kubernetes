@@ -255,18 +255,24 @@ func TestGenerateTimeWindow(t *testing.T) {
 	logStats(t, hoursOfDay)
 }
 
-// TestWeekday tests that an upgrade window is returned when now is
-// the requested window.
+// TestWeekday verifies a configured window remains one hour across midnight.
 func TestWeekday(t *testing.T) {
 	t.Parallel()
 
 	ctx := testContext(t)
-	now := time.Now().UTC()
-	upgrader := newWeekDayUpgrader(now.Weekday(), now.Hour(), now.Hour()+2)
+	upgrader := newWeekDayUpgrader(time.Friday, 23, 0)
 	window := util.TimeWindowFromResource(ctx, upgrader)
 
-	if !validToday(t, window) {
-		t.Fatal("not valid at any point today")
+	if window.Start.Weekday() != time.Friday {
+		t.Fatal("start is not on the configured weekday")
+	}
+
+	if window.Start.Hour() != 23 {
+		t.Fatal("start is not at the configured hour")
+	}
+
+	if window.End.Sub(window.Start) != time.Hour {
+		t.Fatal("window is not one hour")
 	}
 }
 
