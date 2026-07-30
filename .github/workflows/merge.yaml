@@ -84,3 +84,16 @@ jobs:
           --broker-base-url="${{ vars.PACT_BROKER_URL_DEV }}" \
           --broker-username="${{ vars.PACT_BROKER_USERNAME }}" \
           --broker-password="${{ secrets.PACT_BROKER_PASSWORD }}"
+  PublishOpenAPISpec:
+    needs: Coverage
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Publish OpenAPI spec
+      uses: nscaledev/openapi/.github/actions/publish-spec@main
+      with:
+        service: kubernetes
+        spec-path: pkg/openapi/server.spec.yaml
+        version: main
+        token: ${{ secrets.OPENAPI_PUBLISH_TOKEN }}
