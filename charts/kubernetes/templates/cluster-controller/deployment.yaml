@@ -23,6 +23,9 @@ spec:
         {{- include "unikorn.region.flags" . | nindent 8 }}
         {{- include "unikorn.otlp.flags" . | nindent 8 }}
         {{- include "unikorn.mtls.flags" . | nindent 8 }}
+        {{- with .Values.clusterController.nvidiaRDMAEnabledRegionIDs }}
+        - --nvidia-rdma-enabled-region-ids={{ join "," . }}
+        {{- end }}
         ports:
         - name: prometheus
           containerPort: 8080

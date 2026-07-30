@@ -191,6 +191,9 @@ func (a *ApplicationReferenceGetter) nvidiaHardwareEnablement(ctx context.Contex
 type Options struct {
 	// identityOptions allow the identity host and CA to be set.
 	identityOptions *identityclient.Options
+	// nvidiaRDMAEnabledRegionIDs identifies regions whose NVIDIA GPU driver
+	// requires RDMA integration.
+	nvidiaRDMAEnabledRegionIDs []string
 	// regionOptions allows the region host and CA to be set.
 	regionOptions *regionclient.Options
 	// clientOptions give access to client certificate information as
@@ -212,6 +215,11 @@ func (o *Options) AddFlags(f *pflag.FlagSet) {
 	o.identityOptions.AddFlags(f)
 	o.regionOptions.AddFlags(f)
 	o.clientOptions.AddFlags(f)
+	f.StringSliceVar(&o.nvidiaRDMAEnabledRegionIDs, "nvidia-rdma-enabled-region-ids", nil, "Region IDs where the NVIDIA GPU driver enables RDMA integration")
+}
+
+func (o *Options) nvidiaRDMAEnabled(regionID string) bool {
+	return slices.Contains(o.nvidiaRDMAEnabledRegionIDs, regionID)
 }
 
 // Provisioner encapsulates control plane provisioning.
@@ -381,7 +389,9 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 	addOnsApplications = append(addOnsApplications,
 		conditional.New("nvidia-hardware-enablement",
 			func() bool { return p.cluster.GPUOperatorEnabled() && provisionerOptions.gpuVendorNvidia },
-			nvidiahwe.New(apps.nvidiaHardwareEnablement),
+			nvidiahwe.New(apps.nvidiaHardwareEnablement, nvidiahwe.ProvisionerOptions{
+				RDMAEnabled: p.options.nvidiaRDMAEnabled(p.cluster.Spec.RegionID),
+			}),
 		),
 	)
 

@@ -24,14 +24,23 @@ import (
 	"github.com/unikorn-cloud/core/pkg/provisioners/util"
 )
 
+// ProvisionerOptions define cluster-specific NVIDIA hardware enablement behavior.
+type ProvisionerOptions struct {
+	RDMAEnabled bool
+}
+
 // New returns a new initialized provisioner object.
-func New(getApplication application.GetterFunc) *application.Provisioner {
-	p := &Provisioner{}
+func New(getApplication application.GetterFunc, options ProvisionerOptions) *application.Provisioner {
+	p := &Provisioner{
+		options: options,
+	}
 
 	return application.New(getApplication).WithGenerator(p)
 }
 
-type Provisioner struct{}
+type Provisioner struct {
+	options ProvisionerOptions
+}
 
 // Ensure the Provisioner interface is implemented.
 var _ application.ValuesGenerator = &Provisioner{}
@@ -47,11 +56,18 @@ func (p *Provisioner) Values(ctx context.Context, version unikornv1core.Semantic
 				"tolerations": util.ControlPlaneTolerations(),
 			},
 		},
-		// The GPU operator Deployment itself needs to be pinned to control-plane
-		// nodes and tolerate their taints, consistent with the standalone
-		// nvidia-gpu-operator provisioner.  Daemonsets already use operator:Exists
-		// tolerations in the chart defaults so those require no override.
 		"gpu-operator": map[string]any{
+			// RDMA integration allows the GPU driver to consume the OFED stack
+			// supplied by the NVIDIA Network Operator.
+			"driver": map[string]any{
+				"rdma": map[string]any{
+					"enabled": p.options.RDMAEnabled,
+				},
+			},
+			// The GPU operator Deployment itself needs to be pinned to control-plane
+			// nodes and tolerate their taints, consistent with the standalone
+			// nvidia-gpu-operator provisioner.  Daemonsets already use operator:Exists
+			// tolerations in the chart defaults so those require no override.
 			"operator": map[string]any{
 				"affinity": map[string]any{
 					"nodeAffinity": map[string]any{

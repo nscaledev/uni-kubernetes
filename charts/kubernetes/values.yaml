@@ -28,6 +28,8 @@ clusterManagerController:
 clusterController:
   # Allows override of the global default image.
   image:
+  # Region IDs where the NVIDIA GPU driver should enable RDMA integration.
+  nvidiaRDMAEnabledRegionIDs: []
   # Allows resource limits to be set.
   resources:
     limits:
