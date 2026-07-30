@@ -187,11 +187,11 @@ spec:
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: KubernetesClusterApplicationBundle
 metadata:
-  name: kubernetes-cluster-1.6.0-b200-rdma
+  name: kubernetes-cluster-1.6.1
   labels:
     {{- include "unikorn.labels" . | nindent 4 }}
 spec:
-  version: 1.6.0-b200.1
+  version: 1.6.1
   preview: true
   applications:
   - name: cluster-openstack
