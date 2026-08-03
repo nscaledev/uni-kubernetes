@@ -291,6 +291,16 @@ spec:
     path: chart
     branch: nvidia-platform-0.1.1 
     namespace: kube-system
+  - version: v0.1.2
+    repo: https://github.com/nscaledev/nvidia-platform-chart
+    path: chart
+    branch: nvidia-platform-0.1.2
+    namespace: kube-system
+    parameters:
+    - name: gpu-operator.driver.rdma.enabled
+      value: "true"
+    - name: gpu-operator.driver.rdma.useHostMofed
+      value: "false"
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
