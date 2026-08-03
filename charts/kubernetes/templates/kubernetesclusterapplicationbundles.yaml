@@ -222,7 +222,7 @@ spec:
   - name: nvidia-hardware-enablement
     reference:
       kind: HelmApplication
-      name: {{ include "resource.id" "nvidia-hardware-enablement-rdma" }}
+      name: {{ include "resource.id" "nvidia-hardware-enablement" }}
       version: v0.1.2
   - name: cert-manager
     reference:
