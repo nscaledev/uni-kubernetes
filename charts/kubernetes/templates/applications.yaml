@@ -291,21 +291,6 @@ spec:
     path: chart
     branch: nvidia-platform-0.1.1 
     namespace: kube-system
----
-apiVersion: unikorn-cloud.org/v1alpha1
-kind: HelmApplication
-metadata:
-  name: {{ include "resource.id" "nvidia-hardware-enablement-rdma" }}
-  labels:
-    {{- include "unikorn.labels" . | nindent 4 }}
-    unikorn-cloud.org/name: nvidia-hardware-enablement-rdma
-  annotations:
-    unikorn-cloud.org/description: |-
-      NVIDIA hardware enablement with the GPU driver's RDMA readiness path enabled.
-spec:
-  documentation: https://github.com/nscaledev/nvidia-platform-chart
-  license: Apache-2.0 License
-  versions:
   - version: v0.1.2
     repo: https://github.com/nscaledev/nvidia-platform-chart
     path: chart
