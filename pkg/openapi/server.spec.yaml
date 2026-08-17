@@ -748,6 +748,13 @@ components:
             GPU operator, network configuration, etc.
           type: boolean
           default: false
+        gatewayApi:
+          description: |-
+            Enables the bundled Gateway API support. Disable this if you
+            intend to run your own Gateway API implementation, to avoid
+            conflicts with the bundled one. Defaults to true.
+          type: boolean
+          default: true
     kubernetesClusterControlPlane:
       description: |-
         Defines explicit control plane topology. When not specified, the platform

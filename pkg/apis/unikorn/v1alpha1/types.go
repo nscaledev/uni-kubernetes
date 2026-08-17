@@ -195,6 +195,10 @@ type KubernetesClusterFeaturesSpec struct {
 	// This is only installed if a workload pool has a flavor that defines
 	// a valid GPU specification and vendor.
 	GPUOperator bool `json:"gpuOperator,omitempty"`
+	// GatewayAPI enables the bundled Gateway API support, including CRDs
+	// and CNI-provided implementation. Disable this if you intend to run
+	// your own Gateway API implementation.
+	GatewayAPI bool `json:"gatewayApi,omitempty"`
 }
 
 type KubernetesClusterWorkloadPoolsSpec struct {

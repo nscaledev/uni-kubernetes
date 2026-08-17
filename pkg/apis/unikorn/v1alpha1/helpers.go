@@ -187,6 +187,13 @@ func (c *KubernetesCluster) GPUOperatorEnabled() bool {
 	return c.Spec.Features != nil && c.Spec.Features.GPUOperator
 }
 
+// GatewayAPIEnabled indicates whether the bundled Gateway API support is
+// enabled for the cluster. This defaults to true, so that clusters with
+// no explicit features set mirror the pre-existing always-on behaviour.
+func (c *KubernetesCluster) GatewayAPIEnabled() bool {
+	return c.Spec.Features == nil || c.Spec.Features.GatewayAPI
+}
+
 func (c *KubernetesCluster) GetWorkloadPool(name string) *KubernetesWorkloadPoolSpec {
 	for i, pool := range c.Spec.WorkloadPools.Pools {
 		if pool.Name == name {

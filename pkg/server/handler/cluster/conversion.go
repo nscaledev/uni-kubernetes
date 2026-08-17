@@ -188,6 +188,7 @@ func convertFeatures(in *unikornv1.KubernetesClusterFeaturesSpec) *openapi.Kuber
 
 	return &openapi.KubernetesClusterFeatures{
 		HardwareEnablement: in.GPUOperator,
+		GatewayApi:         &in.GatewayAPI,
 	}
 }
 
@@ -649,16 +650,22 @@ func (g *generator) preserveDefaultedFields(cluster *unikornv1.KubernetesCluster
 	}
 
 	cluster.Spec.Features.Autoscaling = g.existing.Spec.Features.Autoscaling
+	cluster.Spec.Features.GatewayAPI = g.existing.Spec.Features.GatewayAPI
 }
 
 func generateFeatures(request *openapi.KubernetesClusterFeatures) *unikornv1.KubernetesClusterFeaturesSpec {
 	out := &unikornv1.KubernetesClusterFeaturesSpec{
 		Autoscaling: true,
 		GPUOperator: false,
+		GatewayAPI:  true,
 	}
 
 	if request != nil {
 		out.GPUOperator = request.HardwareEnablement
+
+		if request.GatewayApi != nil {
+			out.GatewayAPI = *request.GatewayApi
+		}
 	}
 
 	return out

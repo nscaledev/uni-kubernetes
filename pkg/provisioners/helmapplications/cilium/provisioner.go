@@ -94,6 +94,9 @@ func (p *Provisioner) Values(ctx context.Context, _ unikornv1core.SemanticVersio
 				},
 			},
 		},
+		"gatewayAPI": map[string]any{
+			"enabled": cluster.GatewayAPIEnabled(),
+		},
 	}
 
 	return values, nil

@@ -139,6 +139,11 @@ type KubernetesClusterControlPlane struct {
 
 // KubernetesClusterFeatures Cluster feature flags.
 type KubernetesClusterFeatures struct {
+	// GatewayApi Enables the bundled Gateway API support. Disable this if you
+	// intend to run your own Gateway API implementation, to avoid
+	// conflicts with the bundled one. Defaults to true.
+	GatewayApi *bool `json:"gatewayApi,omitempty"`
+
 	// HardwareEnablement Enables and hardware operators and drivers for the cluster e.g.
 	// GPU operator, network configuration, etc.
 	HardwareEnablement bool `json:"hardwareEnablement"`

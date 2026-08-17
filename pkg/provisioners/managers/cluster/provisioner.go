@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/Masterminds/semver/v3"
 	"github.com/spf13/pflag"
 
 	unikornv1core "github.com/unikorn-cloud/core/pkg/apis/unikorn/v1alpha1"
@@ -319,14 +318,8 @@ func (p *Provisioner) getProvisionerOptions(options *kubernetesprovisioners.Clus
 	return provisionerOptions, nil
 }
 
-//nolint:cyclop
 func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetesprovisioners.ClusterOpenstackOptions, provision bool) (provisioners.Provisioner, error) {
 	apps := newApplicationReferenceGetter(&p.cluster)
-
-	bundle, err := apps.getBundle(ctx)
-	if err != nil {
-		return nil, err
-	}
 
 	provisionerOptions, err := p.getProvisionerOptions(options)
 	if err != nil {
@@ -385,8 +378,12 @@ func (p *Provisioner) getProvisioner(ctx context.Context, options *kubernetespro
 		),
 	)
 
-	// TODO: remove this conditional when smaller versions are all retired.
-	if bundle.Spec.Version.Version.Compare(semver.MustParse("v1.3.0")) >= 0 {
+	// Unlike the other conditional add-ons above, gateway-api-crds deliberately
+	// doesn't use conditional.New: disabling it via the API should only stop it
+	// being installed, not deprovision already-installed CRDs, as that would
+	// cascade-delete any Gateway API resources the user manages via their own
+	// implementation.
+	if p.cluster.GatewayAPIEnabled() {
 		addOnsApplications = append(addOnsApplications, gatewayapi.New(apps.gatewayAPI))
 	}
 
