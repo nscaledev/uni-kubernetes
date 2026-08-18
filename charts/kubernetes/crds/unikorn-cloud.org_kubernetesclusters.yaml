@@ -304,6 +304,12 @@ spec:
                       Autoscaling enables the provision of a cluster autoscaler.
                       This is only installed if a workload pool has autoscaling enabled.
                     type: boolean
+                  gatewayApi:
+                    description: |-
+                      GatewayAPI enables the bundled Gateway API support, including CRDs
+                      and CNI-provided implementation. Disable this if you intend to run
+                      your own Gateway API implementation.
+                    type: boolean
                   gpuOperator:
                     description: |-
                       GPUOperator enables the provision of a GPU operator.
