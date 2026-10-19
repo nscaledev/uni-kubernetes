@@ -4,7 +4,7 @@ go 1.25.8
 
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
-	github.com/getkin/kin-openapi v0.144.0
+	github.com/getkin/kin-openapi v0.149.0
 	github.com/go-chi/chi/v5 v5.2.4
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
@@ -86,7 +86,7 @@ require (
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
-	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/spjmurray/go-util v0.1.3 // indirect
