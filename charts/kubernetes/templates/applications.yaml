@@ -176,6 +176,21 @@ spec:
       value: 'false'
     - name: bpf.lbExternalClusterIP
       value: 'true'
+  - version: 1.19.9
+    repo: https://helm.cilium.io
+    chart: cilium
+    namespace: kube-system
+    parameters:
+    - name: hubble.relay.enabled
+      value: 'true'
+    - name: hubble.ui.enabled
+      value: 'true'
+    - name: operator.setNodeTaints
+      value: 'false'
+    - name: envoy.enabled
+      value: 'false'
+    - name: bpf.lbExternalClusterIP
+      value: 'true'
 ---
 apiVersion: unikorn-cloud.org/v1alpha1
 kind: HelmApplication
