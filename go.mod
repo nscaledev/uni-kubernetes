@@ -5,7 +5,7 @@ go 1.25.8
 require (
 	github.com/Masterminds/semver/v3 v3.3.1
 	github.com/getkin/kin-openapi v0.144.0
-	github.com/go-chi/chi/v5 v5.2.4
+	github.com/go-chi/chi/v5 v5.4.0
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/utils v0.0.0-20231010081019-80377eca5d56
