@@ -546,6 +546,27 @@ func (c *Client) Delete(ctx context.Context, organizationID identityids.Organiza
 	return nil
 }
 
+// getForUpdate returns the cluster that a request updates.  The network and identity
+// of a cluster belong to its region, so the region cannot change.  This function
+// refuses a request for another region before any step uses that region.
+func (c *Client) getForUpdate(ctx context.Context, namespace string, clusterID kubernetesids.KubernetesClusterID, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
+	current, err := c.get(ctx, namespace, clusterID)
+	if err != nil {
+		return nil, err
+	}
+
+	currentRegionID, err := regionids.ParseRegionID(current.Spec.RegionID)
+	if err != nil {
+		return nil, err
+	}
+
+	if request.Spec.RegionId != currentRegionID {
+		return nil, errors.OAuth2InvalidRequest("the region of a cluster cannot change")
+	}
+
+	return current, nil
+}
+
 // Update implements read/modify/write for the cluster.
 func (c *Client) Update(ctx context.Context, appclient appBundleLister, organizationID identityids.OrganizationID, projectID identityids.ProjectID, clusterID kubernetesids.KubernetesClusterID, request *openapi.KubernetesClusterWrite) error {
 	namespace, err := common.ProjectNamespace(ctx, c.client, organizationID, projectID)
@@ -557,7 +578,7 @@ func (c *Client) Update(ctx context.Context, appclient appBundleLister, organiza
 		return errors.OAuth2InvalidRequest("control plane is being deleted")
 	}
 
-	current, err := c.get(ctx, namespace.Name, clusterID)
+	current, err := c.getForUpdate(ctx, namespace.Name, clusterID, request)
 	if err != nil {
 		return err
 	}
