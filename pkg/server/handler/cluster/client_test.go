@@ -283,3 +283,36 @@ func TestClusterUpdateAcceptsSameRegion(t *testing.T) {
 		})
 	}
 }
+
+// TestClusterUpdateRepairsStoredRegionThatIsNotAUUID checks that an update works
+// when the stored region is not a UUID.  Such a value cannot match the region of
+// the request, so the update writes the region of the request over it.  The
+// record of the region service shows that the update ran.
+func TestClusterUpdateRepairsStoredRegionThatIsNotAUUID(t *testing.T) {
+	t.Parallel()
+
+	cases := map[string]string{
+		"stored as text":  "not-a-uuid",
+		"stored as empty": "",
+	}
+
+	for name, storedRegionID := range cases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			h := newUpdateHarness(t, storedRegionID)
+
+			request := clusterRequestFixture(kubernetesVersion2)
+			request.Spec.WorkloadPools[0].Machine.Replicas = ptr.To(2)
+
+			require.NoError(t, h.update(t, request))
+
+			stored := h.stored(t)
+			require.Equal(t, regionID, stored.Spec.RegionID)
+			require.Len(t, stored.Spec.WorkloadPools.Pools, 1)
+			require.Equal(t, 2, stored.Spec.WorkloadPools.Pools[0].Replicas)
+
+			require.NotEmpty(t, h.region.Requests())
+		})
+	}
+}

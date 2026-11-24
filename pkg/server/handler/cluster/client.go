@@ -548,7 +548,8 @@ func (c *Client) Delete(ctx context.Context, organizationID identityids.Organiza
 
 // getForUpdate returns the cluster that a request updates.  The network and identity
 // of a cluster belong to its region, so the region cannot change.  This function
-// refuses a request for another region before any step uses that region.
+// refuses a request for another region before any step uses that region.  A stored
+// region that is not a UUID cannot be compared, so the update repairs it.
 func (c *Client) getForUpdate(ctx context.Context, namespace string, clusterID kubernetesids.KubernetesClusterID, request *openapi.KubernetesClusterWrite) (*unikornv1.KubernetesCluster, error) {
 	current, err := c.get(ctx, namespace, clusterID)
 	if err != nil {
@@ -556,11 +557,7 @@ func (c *Client) getForUpdate(ctx context.Context, namespace string, clusterID k
 	}
 
 	currentRegionID, err := regionids.ParseRegionID(current.Spec.RegionID)
-	if err != nil {
-		return nil, err
-	}
-
-	if request.Spec.RegionId != currentRegionID {
+	if err == nil && request.Spec.RegionId != currentRegionID {
 		return nil, errors.OAuth2InvalidRequest("the region of a cluster cannot change")
 	}
 
