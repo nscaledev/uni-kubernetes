@@ -55,9 +55,11 @@ import (
 )
 
 const (
-	otherRegionID   = "0f2a58ab-5e7c-4a39-a11a-5a8d4c5ac0b1"
-	storedClusterID = "5d2f2c4a-6a6c-4f3e-9d0e-6c1f2b9d7a10"
-	allocationID    = "b0a5e4c2-3d52-4a62-a1a4-2f6b6a3f1c55"
+	otherRegionID    = "0f2a58ab-5e7c-4a39-a11a-5a8d4c5ac0b1"
+	storedClusterID  = "5d2f2c4a-6a6c-4f3e-9d0e-6c1f2b9d7a10"
+	missingClusterID = "9a8b7c6d-5e4f-4a3b-8c2d-1e0f9a8b7c6d"
+	allocationID     = "b0a5e4c2-3d52-4a62-a1a4-2f6b6a3f1c55"
+	storedIdentityID = "e1f0b8d2-7c4a-4d8e-a3b5-9c2d6f1a0b34"
 )
 
 // fakeAPI stands in for a remote service.  It records every request it gets
@@ -161,7 +163,7 @@ func newUpdateHarness(t *testing.T, storedRegionID string) *updateHarness {
 	existing := existingClusterFixture(t, kubernetesVersion2)
 	existing.Name = storedClusterID
 	existing.Namespace = defaultNamespace
-	existing.Annotations = map[string]string{constants.AllocationAnnotation: allocationID}
+	existing.Annotations = map[string]string{constants.AllocationAnnotation: allocationID, constants.IdentityAnnotation: storedIdentityID}
 	existing.Spec.RegionID = storedRegionID
 
 	options := newGeneratorOptions()
@@ -199,6 +201,12 @@ func newUpdateHarness(t *testing.T, storedRegionID string) *updateHarness {
 func (h *updateHarness) update(t *testing.T, request *openapi.KubernetesClusterWrite) error {
 	t.Helper()
 
+	return h.updateCluster(t, storedClusterID, request)
+}
+
+func (h *updateHarness) updateCluster(t *testing.T, clusterID string, request *openapi.KubernetesClusterWrite) error {
+	t.Helper()
+
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
 
@@ -206,7 +214,7 @@ func (h *updateHarness) update(t *testing.T, request *openapi.KubernetesClusterW
 
 	appclient := applicationbundle.NewClient(h.client, defaultNamespace)
 
-	return h.clusters.Update(ctx, appclient, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), kubernetesids.MustParseKubernetesClusterID(storedClusterID), request)
+	return h.clusters.Update(ctx, appclient, identityids.MustParseOrganizationID(organizationID), identityids.MustParseProjectID(projectID), kubernetesids.MustParseKubernetesClusterID(clusterID), request)
 }
 
 func (h *updateHarness) stored(t *testing.T) *unikornv1.KubernetesCluster {
@@ -243,8 +251,8 @@ func TestClusterUpdateRefusesRegionChange(t *testing.T) {
 	request.Spec.RegionId = regionids.MustParseRegionID(otherRegionID)
 
 	err := h.update(t, request)
-	require.Error(t, err)
 	require.True(t, servererrors.IsBadRequest(err), "expected a bad request error, got: %v", err)
+	require.ErrorContains(t, err, "the region of a cluster cannot change")
 
 	require.Equal(t, before, h.storedBytes(t))
 	require.Empty(t, h.region.Requests())
@@ -275,7 +283,7 @@ func TestClusterUpdateAcceptsSameRegion(t *testing.T) {
 			require.NoError(t, h.update(t, request))
 
 			stored := h.stored(t)
-			require.Equal(t, regionID, strings.ToLower(stored.Spec.RegionID))
+			require.Equal(t, regionID, stored.Spec.RegionID)
 			require.Len(t, stored.Spec.WorkloadPools.Pools, 1)
 			require.Equal(t, 2, stored.Spec.WorkloadPools.Pools[0].Replicas)
 
@@ -284,35 +292,53 @@ func TestClusterUpdateAcceptsSameRegion(t *testing.T) {
 	}
 }
 
-// TestClusterUpdateRepairsStoredRegionThatIsNotAUUID checks that an update works
-// when the stored region is not a UUID.  Such a value cannot match the region of
-// the request, so the update writes the region of the request over it.  The
-// record of the region service shows that the update ran.
-func TestClusterUpdateRepairsStoredRegionThatIsNotAUUID(t *testing.T) {
+// TestClusterUpdateRefusesStoredRegionThatIsNotAUUID checks that an update fails
+// when the stored region is not a UUID, whatever region the request names.  Such
+// a value cannot be compared with the region of the request, so the update
+// cannot show that the region stays the same.  Nothing is written and no
+// service is called.
+func TestClusterUpdateRefusesStoredRegionThatIsNotAUUID(t *testing.T) {
 	t.Parallel()
 
-	cases := map[string]string{
-		"stored as text":  "not-a-uuid",
-		"stored as empty": "",
+	cases := map[string]struct {
+		stored  string
+		request string
+	}{
+		"stored as text, same region requested":   {"not-a-uuid", regionID},
+		"stored as text, other region requested":  {"not-a-uuid", otherRegionID},
+		"stored as empty, same region requested":  {"", regionID},
+		"stored as empty, other region requested": {"", otherRegionID},
 	}
 
-	for name, storedRegionID := range cases {
+	for name, tc := range cases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			h := newUpdateHarness(t, storedRegionID)
+			h := newUpdateHarness(t, tc.stored)
+			before := h.storedBytes(t)
 
 			request := clusterRequestFixture(kubernetesVersion2)
-			request.Spec.WorkloadPools[0].Machine.Replicas = ptr.To(2)
+			request.Spec.RegionId = regionids.MustParseRegionID(tc.request)
 
-			require.NoError(t, h.update(t, request))
+			err := h.update(t, request)
+			require.True(t, servererrors.IsBadRequest(err), "expected a bad request error, got: %v", err)
+			require.ErrorContains(t, err, "the stored region of the cluster is not valid")
 
-			stored := h.stored(t)
-			require.Equal(t, regionID, stored.Spec.RegionID)
-			require.Len(t, stored.Spec.WorkloadPools.Pools, 1)
-			require.Equal(t, 2, stored.Spec.WorkloadPools.Pools[0].Replicas)
-
-			require.NotEmpty(t, h.region.Requests())
+			require.Equal(t, before, h.storedBytes(t))
+			require.Empty(t, h.region.Requests())
+			require.Empty(t, h.identity.Requests())
 		})
 	}
+}
+
+// TestClusterUpdateOfMissingClusterIsNotFound checks that a cluster that does not
+// exist gives a 404 before the region is looked at.
+func TestClusterUpdateOfMissingClusterIsNotFound(t *testing.T) {
+	t.Parallel()
+
+	h := newUpdateHarness(t, regionID)
+
+	err := h.updateCluster(t, missingClusterID, clusterRequestFixture(kubernetesVersion2))
+	require.True(t, servererrors.IsHTTPNotFound(err), "expected not found, got: %v", err)
+	require.Empty(t, h.region.Requests())
 }
